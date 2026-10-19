@@ -2417,6 +2417,44 @@
           "after_hash": "ed6e31534d75"
         }
       ]
+    },
+    {
+      "id": "0017",
+      "time": "2026-10-20 01:42:38",
+      "summary": "Keep ENGRAMDELTA_DESIGN.md out of the repo",
+      "explanation": "Added ENGRAMDELTA_DESIGN.md to .gitignore and removed it from the git index with git rm --cached (the local file is untouched). It had been committed in 61388d4, so the ignore rule alone would not have stopped tracking it. The README link to it became plain text, since the file is no longer on GitHub. The file still exists in the history of earlier commits.",
+      "files": [
+        {
+          "path": ".gitignore",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "15-17",
+              "old": null
+            }
+          ],
+          "added": 3,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "b2deaaf50e1a"
+        },
+        {
+          "path": "README.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "5",
+              "old": "5"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "8f17e53a8a78"
+        }
+      ]
     }
   ]
 }

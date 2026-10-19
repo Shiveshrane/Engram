@@ -2,7 +2,7 @@
 
 Does a hashed n-gram lookup ([Engram](https://arxiv.org/abs/2601.07372)) protect long-range recall in a
 fixed-size delta-rule state ([Gated DeltaNet](https://arxiv.org/abs/2412.06464))? The spec is in
-[ENGRAMDELTA_DESIGN.md](ENGRAMDELTA_DESIGN.md). This is a mechanism study on free-tier GPUs: Kaggle 2 × T4,
+`ENGRAMDELTA_DESIGN.md` (kept locally, not in this repo). This is a mechanism study on free-tier GPUs: Kaggle 2 × T4,
 with synchronous data-parallel training across the two GPUs.
 
 ## Layout

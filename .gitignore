@@ -12,3 +12,6 @@ logs/
 *_results.zip
 *_results.zip.tmp
 run.log
+
+# design doc stays local (not in the repo)
+ENGRAMDELTA_DESIGN.md

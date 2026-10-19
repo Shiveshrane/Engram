@@ -476,3 +476,19 @@ Diff: `.changelog/entries/0015/diff.patch`
 **What the change does:** The session log used to be logs/<notebook>__<UTC>.log, which was easy to miss. SETUP now writes it live to /kaggle/working/run.log (fixed name, top level of the Output tab) with a header line naming the notebook and start time, and prints a banner with the paths of run.log, the per-run logs (results/_logs/<group>/<run_id>.log) and the results zip. bundle() copies run.log into results/_logs/notebooks/<notebook>__<UTC>.log so the zip carries it. main() inserts a 'Logs and downloads' markdown cell as the second cell of every notebook explaining the three files and how to download/unzip them. run.log added to .gitignore.
 
 Diff: `.changelog/entries/0016/diff.patch`
+
+---
+
+## [0017] Keep ENGRAMDELTA_DESIGN.md out of the repo
+*2026-10-20 01:42:38*
+
+- **File:** `.gitignore` (modified, +3/-0)
+  - **Lines:** 15-17 added
+- **File:** `README.md` (modified, +1/-1)
+  - **Lines:** 5 modified (were 5 before)
+
+**Summary:** Keep ENGRAMDELTA_DESIGN.md out of the repo
+
+**What the change does:** Added ENGRAMDELTA_DESIGN.md to .gitignore and removed it from the git index with git rm --cached (the local file is untouched). It had been committed in 61388d4, so the ignore rule alone would not have stopped tracking it. The README link to it became plain text, since the file is no longer on GitHub. The file still exists in the history of earlier commits.
+
+Diff: `.changelog/entries/0017/diff.patch`
