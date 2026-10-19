@@ -2147,6 +2147,117 @@
           "after_hash": "87fc9a5a91b3"
         }
       ]
+    },
+    {
+      "id": "0012",
+      "time": "2026-10-20 01:10:14",
+      "summary": "Write every sweep run's full output to results/_logs/<group>/<run_id>.log",
+      "explanation": "sweep.main() used to launch each run with subprocess.run, so the training output only reached the notebook stream. The new run_logged() starts the run with Popen (PYTHONUNBUFFERED=1), prints every line live as before, and also appends it to results/_logs/<group>/<run_id>.log with start/exit-code markers. The _failures entry now points to that log. Because the logs live under results/, they travel with HF sync, PREV_OUTPUTS restore and the notebook results zip.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/sweep.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "12-13",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "40-56",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "93-94",
+              "old": "74"
+            },
+            {
+              "kind": "modified",
+              "new": "105-106",
+              "old": "85"
+            }
+          ],
+          "added": 23,
+          "removed": 2,
+          "before_existed": true,
+          "after_hash": "a087a3a7ead4"
+        }
+      ]
+    },
+    {
+      "id": "0013",
+      "time": "2026-10-20 01:10:14",
+      "summary": "Notebooks: session log file, cell-error tracebacks, and a downloadable results zip",
+      "explanation": "The shared SETUP cell now tees sys.stdout/stderr into logs/<notebook>__<UTC start>.log with elapsed seconds on every line, and registers IPython pre/post_run_cell hooks that mark each cell's start and write the full traceback of a failing cell. After every cell, bundle() copies the session log into results/_logs/notebooks/ and zips results/ (result JSONs + per-run logs, no checkpoints) into <notebook>_results.zip in the output, so a partial zip exists even if the session dies. FINISH prints how to download and unzip it. main() substitutes the notebook name for __NB_NAME__. .gitignore ignores local logs/ and *_results.zip; README documents the download step. All 12 .ipynb files were regenerated from build_notebooks.py.",
+      "files": [
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "49",
+              "old": "49"
+            },
+            {
+              "kind": "added",
+              "new": "51",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "56-119",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "214-220",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "742-743",
+              "old": null
+            }
+          ],
+          "added": 75,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "55427f339ae8"
+        },
+        {
+          "path": ".gitignore",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "11-13",
+              "old": null
+            }
+          ],
+          "added": 3,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "05d32d9eab87"
+        },
+        {
+          "path": "README.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "64-69",
+              "old": null
+            }
+          ],
+          "added": 6,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "6fc5877dde29"
+        }
+      ]
     }
   ]
 }

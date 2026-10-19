@@ -46,12 +46,77 @@ NCCL_ENV     = {}               # set to {"NCCL_P2P_DISABLE": "1", "NCCL_IB_DISA
 
 SETUP = '''
 # ===================== Session setup (no edits needed) =====================
-import os, sys, subprocess, shutil, pathlib, json, glob, time
+import os, sys, subprocess, shutil, pathlib, json, glob, time, datetime, traceback, zipfile
 NEEDS_GPU, INSTALL_FLA = __NEEDS_GPU__, __INSTALL_FLA__
+NB_NAME = "__NB_NAME__"
 ON_KAGGLE = os.path.isdir("/kaggle/working")
 WORK = pathlib.Path("/kaggle/working") if ON_KAGGLE else pathlib.Path.cwd()
 # Locally (notebook opened from the repo's notebooks/ folder) the repo is the parent directory.
 REPO = WORK / "engramdelta" if ON_KAGGLE else (WORK.parent if WORK.name == "notebooks" else WORK)
+
+# 0. session log: everything this notebook prints (and every error traceback) also goes to
+#    logs/<notebook>__<UTC start>.log, with elapsed seconds per line. After every cell, the log and the whole
+#    results/ folder (result JSONs + per-run training logs) are zipped into <notebook>_results.zip in the output.
+class _Tee:
+    _engram_tee = True
+    def __init__(self, stream, f, t0):
+        self._s, self._f, self._t0, self._bol = stream, f, t0, True
+    def write(self, s):
+        out = []
+        for part in s.splitlines(keepends=True):
+            if self._bol:
+                out.append(f"[{time.time() - self._t0:9.1f}s] ")
+            out.append(part)
+            self._bol = part.endswith("\\n")
+        self._f.write("".join(out)); self._f.flush()
+        return self._s.write(s)
+    def flush(self):
+        self._s.flush(); self._f.flush()
+    def __getattr__(self, k):
+        return getattr(self._s, k)
+
+if not getattr(sys.stdout, "_engram_tee", False):      # setup cell re-run: keep the existing log
+    LOG_DIR = WORK / "logs"; LOG_DIR.mkdir(parents=True, exist_ok=True)
+    LOG_PATH = LOG_DIR / f"{NB_NAME}__{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.log"
+    _LOG = open(LOG_PATH, "a", buffering=1)
+    _T0 = time.time()
+    sys.stdout, sys.stderr = _Tee(sys.stdout, _LOG, _T0), _Tee(sys.stderr, _LOG, _T0)
+ZIP_PATH = WORK / f"{NB_NAME}_results.zip"
+
+def bundle():
+    """Copy the session log into results/_logs/notebooks/ and zip results/ into ZIP_PATH (no checkpoints)."""
+    try:
+        res = REPO / "results"
+        if not res.is_dir():
+            return
+        dst = res / "_logs" / "notebooks"; dst.mkdir(parents=True, exist_ok=True)
+        _LOG.flush(); shutil.copy2(LOG_PATH, dst / LOG_PATH.name)
+        tmp = ZIP_PATH.with_name(ZIP_PATH.name + ".tmp")
+        with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
+            for root, _, files in os.walk(res):
+                for fn in files:
+                    fp = os.path.join(root, fn); z.write(fp, os.path.relpath(fp, REPO))
+        os.replace(tmp, ZIP_PATH)
+    except Exception as e:      # never let logging break the experiment
+        sys.__stdout__.write(f"!! results zip failed: {e}\\n")
+
+_ip = get_ipython()
+for _ev in ("pre_run_cell", "post_run_cell"):
+    for _cb in list(_ip.events.callbacks[_ev]):
+        if getattr(_cb, "__name__", "").startswith("_engram_"):
+            _ip.events.unregister(_ev, _cb)
+def _engram_pre(info=None):
+    src = (getattr(info, "raw_cell", "") or "").strip().splitlines()
+    _LOG.write(f"\\n===== cell start {time.strftime('%H:%M:%S')} | {src[0][:100] if src else ''}\\n")
+def _engram_post(result=None):
+    err = getattr(result, "error_in_exec", None) or getattr(result, "error_before_exec", None)
+    if err is not None:
+        _LOG.write("!! CELL ERROR\\n" + "".join(traceback.format_exception(type(err), err, err.__traceback__)))
+    bundle()
+_ip.events.register("pre_run_cell", _engram_pre)
+_ip.events.register("post_run_cell", _engram_post)
+print(f"session log: {LOG_PATH}")
+print(f"results zip (rebuilt after every cell): {ZIP_PATH}")
 
 def run(cmd, check=True, env=None, timeout=None, show=None):
     """Run a shell command in the repo and stream its output into this notebook."""
@@ -146,6 +211,13 @@ if os.environ.get("HF_REPO"):
 n = sum(len(f) for _, _, f in os.walk(REPO / "results"))
 print(f"{n} files under results/. They are part of this notebook's output: Save Version keeps them.")
 print("Next session: attach this notebook's output as an input and add its path to PREV_OUTPUTS (or use HF_REPO).")
+bundle()
+_mb = ZIP_PATH.stat().st_size / 1e6 if ZIP_PATH.exists() else 0.0
+print(f"\\nTo send the results back: Output tab -> download {ZIP_PATH.name} ({_mb:.1f} MB) "
+      "and unzip it into the repo folder:")
+print(f"    unzip -n {ZIP_PATH.name} -d <your Engram repo>     # -n: never overwrite existing files")
+print("It holds results/ (result JSONs), results/_logs/<group>/<run_id>.log (each run's training log)")
+print(f"and results/_logs/notebooks/{LOG_PATH.name} (this notebook's full printed output).")
 '''
 
 
@@ -667,6 +739,8 @@ NB["22_phase2_analysis"] = notebook([
 
 def main():
     for name, nb in NB.items():
+        for c in nb["cells"]:
+            c["source"] = c["source"].replace("__NB_NAME__", name)
         path = os.path.join(HERE, f"{name}.ipynb")
         with open(path, "w") as f:
             json.dump(nb, f, indent=1)

@@ -9,6 +9,8 @@
     then stops; rerun it in the next session.
   * A failed run (exit code other than 0 / 3) is logged to <results>/_failures/<run_id>.log and the sweep continues.
     Failures are listed at the end and must be looked at before the results are used (design rule 4).
+  * Everything a run prints (both ranks) is shown live and also appended to <results>/_logs/<group>/<run_id>.log,
+    so the full training log of every run is part of the results folder (and of the notebook's results zip).
 """
 import argparse
 import os
@@ -35,6 +37,23 @@ def command(run: dict, nproc: int, results_dir: str, ckpt_dir: str, max_minutes:
     for s in run["set"]:
         cmd += ["--set", s]
     return cmd
+
+
+def run_logged(cmd, log_path: str) -> int:
+    """Run cmd, streaming its output to this process's stdout and appending it to log_path. Returns the exit code."""
+    os.makedirs(os.path.dirname(log_path), exist_ok=True)
+    with open(log_path, "a") as f:
+        f.write(f"===== {time.strftime('%Y-%m-%d %H:%M:%S %Z')}  {' '.join(cmd)}\n")
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1,
+                             env={**os.environ, "PYTHONUNBUFFERED": "1"})
+        for line in p.stdout:
+            sys.stdout.write(line)
+            sys.stdout.flush()
+            f.write(line)
+            f.flush()
+        rc = p.wait()
+        f.write(f"===== exit code {rc}\n")
+    return rc
 
 
 def main(argv=None):
@@ -71,7 +90,8 @@ def main(argv=None):
             print(f"[sweep] session budget exhausted ({left:.1f} min left); {len(pending) - i} runs remain. Rerun to continue.")
             break
         print(f"\n[sweep] ({i + 1}/{len(pending)}) {run['run_id']}  [{left:.0f} min left]", flush=True)
-        rc = subprocess.run(command(run, args.nproc, args.results_dir, args.ckpt_dir, left - 2)).returncode
+        log_path = os.path.join(args.results_dir, "_logs", run["group"], f"{run['run_id']}.log")
+        rc = run_logged(command(run, args.nproc, args.results_dir, args.ckpt_dir, left - 2), log_path)
         if rc == 0:
             done += 1
         elif rc == 3:
@@ -82,7 +102,8 @@ def main(argv=None):
             fdir = os.path.join(args.results_dir, "_failures")
             os.makedirs(fdir, exist_ok=True)
             with open(os.path.join(fdir, f"{run['run_id']}.log"), "a") as f:
-                f.write(f"{time.ctime()} exit code {rc}\n{' '.join(command(run, args.nproc, args.results_dir, args.ckpt_dir, 0))}\n")
+                f.write(f"{time.ctime()} exit code {rc}\n{' '.join(command(run, args.nproc, args.results_dir, args.ckpt_dir, 0))}\n"
+                        f"full output: {log_path}\n")
     print(f"\n[sweep] finished {done}, failed {len(failed)}, elapsed {(time.time() - t0) / 3600:.2f} h")
     for f in failed:
         print("  FAILED:", f)

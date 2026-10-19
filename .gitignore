@@ -8,3 +8,6 @@ figures/
 .hub_tmp/
 GIT_COMMIT
 .DS_Store
+logs/
+*_results.zip
+*_results.zip.tmp

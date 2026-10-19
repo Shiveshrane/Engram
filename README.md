@@ -61,6 +61,12 @@ python -m engramdelta.scripts.param_table --phase phase1
 
 All runs are resumable. Re-running a notebook skips finished runs and continues unfinished ones from their checkpoint.
 
+**Logs and results download.** Every notebook writes its full printed output (with elapsed seconds and the traceback
+of any failed cell) to `logs/<notebook>__<UTC start>.log`, and every training run's output to
+`results/_logs/<group>/<run_id>.log`. After every cell, `results/` (result JSONs + all logs, no checkpoints) is zipped
+into `<notebook>_results.zip` in the notebook's output. Download that zip from the Output tab and unzip it into the
+repo with `unzip -n <notebook>_results.zip -d <repo>`.
+
 ## Synchronized DDP in one paragraph
 
 `torchrun --nproc_per_node=2` starts one process per T4. DDP broadcasts rank 0's initial weights and

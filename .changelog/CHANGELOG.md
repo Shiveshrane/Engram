@@ -396,3 +396,35 @@ Diff: `.changelog/entries/0010/diff.patch`
 **What the change does:** NB02 previously ran E0.6, E0.4 and E0.5 in one sweep with E0.4 fixed at 2000 steps. A local check showed MQAR's plateau (recall stuck at 1/N) can last ~1000 steps even at N=8, so 2000 steps may be too short at large N and waste ~1.8 GPU-h. NB02 now runs E0.6 alone, prints the val-recall curve, sets E04_STEPS by a pre-registered rule (A1's 98%-of-max step clamped to [2000, 4000], overridable), and passes it to the E0.4/E0.5 sweep via --extra-set; PREREG.md records the rule.
 
 Diff: `.changelog/entries/0011/diff.patch`
+
+---
+
+## [0012] Write every sweep run's full output to results/_logs/<group>/<run_id>.log
+*2026-10-20 01:10:14*
+
+- **File:** `engramdelta/scripts/sweep.py` (modified, +23/-2)
+  - **Lines:** 12-13 added; 40-56 added; 93-94 modified (were 74 before); 105-106 modified (were 85 before)
+
+**Summary:** Write every sweep run's full output to results/_logs/<group>/<run_id>.log
+
+**What the change does:** sweep.main() used to launch each run with subprocess.run, so the training output only reached the notebook stream. The new run_logged() starts the run with Popen (PYTHONUNBUFFERED=1), prints every line live as before, and also appends it to results/_logs/<group>/<run_id>.log with start/exit-code markers. The _failures entry now points to that log. Because the logs live under results/, they travel with HF sync, PREV_OUTPUTS restore and the notebook results zip.
+
+Diff: `.changelog/entries/0012/diff.patch`
+
+---
+
+## [0013] Notebooks: session log file, cell-error tracebacks, and a downloadable results zip
+*2026-10-20 01:10:14*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +75/-1)
+  - **Lines:** 49 modified (were 49 before); 51 added; 56-119 added; 214-220 added; 742-743 added
+- **File:** `.gitignore` (modified, +3/-0)
+  - **Lines:** 11-13 added
+- **File:** `README.md` (modified, +6/-0)
+  - **Lines:** 64-69 added
+
+**Summary:** Notebooks: session log file, cell-error tracebacks, and a downloadable results zip
+
+**What the change does:** The shared SETUP cell now tees sys.stdout/stderr into logs/<notebook>__<UTC start>.log with elapsed seconds on every line, and registers IPython pre/post_run_cell hooks that mark each cell's start and write the full traceback of a failing cell. After every cell, bundle() copies the session log into results/_logs/notebooks/ and zips results/ (result JSONs + per-run logs, no checkpoints) into <notebook>_results.zip in the output, so a partial zip exists even if the session dies. FINISH prints how to download and unzip it. main() substitutes the notebook name for __NB_NAME__. .gitignore ignores local logs/ and *_results.zip; README documents the download step. All 12 .ipynb files were regenerated from build_notebooks.py.
+
+Diff: `.changelog/entries/0013/diff.patch`
