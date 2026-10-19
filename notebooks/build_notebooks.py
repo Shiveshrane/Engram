@@ -39,7 +39,7 @@ REPO_REF     = "main"           # pin the PREREG commit hash for Phase 1 / 2 run
 CODE_DATASET = "/kaggle/input/engramdelta-src"   # Kaggle Dataset with the repo (used when REPO_URL is None)
 HF_REPO      = None             # e.g. "your-hf-user/engramdelta-runs" (private dataset repo; needs Kaggle Secret HF_TOKEN)
 GDN_BACKEND  = "torch"          # "torch" (pure PyTorch, always works) or "fla" (only if NB00 says PASS)
-FLA_SPEC     = "flash-linear-attention"         # pin after NB00, e.g. "flash-linear-attention==<version NB00 printed>"
+FLA_SPEC     = "fla-core==0.5.2"                 # FLA's kernel package (fla.ops); installed with --no-deps
 PREV_OUTPUTS = []               # outputs of earlier sessions attached as inputs, e.g. ["/kaggle/input/engramdelta-11-phase1-h1-grid"]
 NCCL_ENV     = {}               # set to {"NCCL_P2P_DISABLE": "1", "NCCL_IB_DISABLE": "1"} if NB00's first NCCL test hung
 '''
@@ -186,7 +186,7 @@ NB["00_env_and_kernels"] = notebook([
     **What it does**
     1. Prints the hardware and software report.
     2. Runs an NCCL all-reduce smoke test across the two T4s, with a fallback to `NCCL_P2P_DISABLE=1`.
-    3. Installs flash-linear-attention (`--no-deps`) and runs **test 4**: FLA's Triton GDN kernel and our pure-PyTorch
+    3. Installs FLA's kernel package `fla-core` (`--no-deps`, so Kaggle's torch is never replaced) and runs **test 4**: FLA's Triton GDN kernel and our pure-PyTorch
        kernel against FLA's naive reference (outputs + gradients, fp32 and fp16), plus fwd+bwd speed at T ∈ {512, 1024, 2048}.
     4. Measures 1-GPU vs 2-GPU (DDP) training throughput for A1/A2 at a Phase 1 cell, for each usable backend.
 
@@ -211,7 +211,8 @@ NB["00_env_and_kernels"] = notebook([
     '''),
     md("## 2 · FLA install check"),
     code('''
-    run("python -c \\"import fla, triton; print('fla', fla.__version__, '| triton', triton.__version__)\\"", check=False)
+    run("python -c \\"import importlib.metadata as m, triton; print('fla-core', m.version('fla-core'), '| triton', triton.__version__); "
+        "from fla.ops.gated_delta_rule import chunk_gated_delta_rule; print('fla.ops import OK')\\"", check=False)
     run("python -c \\"import torch; print('compute capability', torch.cuda.get_device_capability(0))\\"", check=False)
     '''),
     md("## 3 · Test 4: kernel correctness (vs FLA naive reference) and speed"),
@@ -259,7 +260,7 @@ NB["00_env_and_kernels"] = notebook([
     '''),
     md('''
     ## Decision (write it into PREREG.md → "Phase 0 outcomes")
-    * `GDN_BACKEND` for all later notebooks = the recommended value above. If it is "fla", also pin `FLA_SPEC` to the printed fla version.
+    * `GDN_BACKEND` for all later notebooks = the recommended value above (keep `FLA_SPEC` as is).
     * If NCCL needed the fallback, set `NCCL_ENV` in all later notebooks.
     * Tokens/s at 2 GPUs (torch / fla) feed the Phase 1 budget in NB02.
     '''),

@@ -123,13 +123,18 @@ def recurrent_gated_delta_rule_torch(
 # ----------------------------------------------------------------------------------------------
 
 _FLA_FN = None
+FLA_IMPORT_ERROR = None    # why the FLA kernel could not be imported (for NB00 diagnostics)
 
 
 def fla_available() -> bool:
+    """FLA's kernels live in the `fla-core` package (`flash-linear-attention` is only the layer/model wrapper)."""
+    global FLA_IMPORT_ERROR
     try:
         from fla.ops.gated_delta_rule import chunk_gated_delta_rule  # noqa: F401
+        FLA_IMPORT_ERROR = None
         return True
-    except Exception:
+    except Exception as e:  # noqa: BLE001
+        FLA_IMPORT_ERROR = f"{type(e).__name__}: {e}"
         return False
 
 

@@ -17,6 +17,7 @@ import time
 import torch
 import torch.nn.functional as F
 
+from ..models import gdn_block
 from ..models.gdn_block import chunk_gated_delta_rule_fla, chunk_gated_delta_rule_torch, fla_available
 from ..utils.run_log import REPO_ROOT, env_info, now, write_result
 
@@ -119,7 +120,10 @@ def main(argv=None):
     args = ap.parse_args(argv)
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     rec = {"run_id": f"kernels_{now().replace(':', '-')}", "status": "done", "phase": "phase0", "group": "E0.kernels",
-           "arm": "-", "env": env_info(), "fla_available": fla_available(), "correctness": correctness(device)}
+           "arm": "-", "env": env_info(), "fla_available": fla_available(),
+           "fla_import_error": gdn_block.FLA_IMPORT_ERROR, "correctness": correctness(device)}
+    if not rec["fla_available"]:
+        print(f"!! FLA kernel not importable, only the torch kernel is tested: {rec['fla_import_error']}")
     if not args.no_speed:
         rec["speed_seconds_fwd_bwd"] = speed(device)
     verdict = {}

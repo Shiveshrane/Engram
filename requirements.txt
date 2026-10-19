@@ -11,4 +11,4 @@ tokenizers        # Phase 2 tokenizer and Engram tokenizer compression
 datasets          # Phase 2 data prep (FineWeb-Edu streaming)
 huggingface_hub   # optional checkpoint / result sync
 # Optional, CUDA only. Install with --no-deps so pip never replaces Kaggle's torch:
-#   pip install --no-deps flash-linear-attention
+#   pip install --no-deps fla-core==0.5.2      (FLA's kernels; flash-linear-attention is only a wrapper)
