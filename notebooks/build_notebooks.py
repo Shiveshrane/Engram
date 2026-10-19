@@ -523,8 +523,99 @@ NB["02_phase0_known_result"] = notebook([
     1. Check the test-7 verdict. If it FAILs, stop here.
     2. Copy `N_star` and `phase1_steps` from `configs/prereg.proposed.yaml` (also `results/prereg.proposed.yaml` in the
        zip) into `configs/prereg.yaml`. If the budget above says OVER BUDGET, decide on cuts (plan §6.5) **before** committing.
+       (If this notebook stopped because A1 did not learn in E0.6, `phase1_steps` and the primary clutter level come from
+       NB04, the clutter pilot.)
     3. Fill the "Phase 0 outcomes" table in PREREG.md, commit, push, and put the commit hash in PREREG.md and as `REPO_REF`
        in notebooks 10–14.
+    """),
+    code(FINISH),
+])
+
+NB["04_phase0_clutter_pilot"] = notebook([
+    md("""
+    # 04 · Phase 0 clutter pilot (E0.7): primary clutter level and Phase 1 step budget  (~0.55 GPU-h)
+
+    **Accelerator:** GPU T4 ×2 · **Internet:** on · **Inputs:** none (N\\* = 32 is read from `configs/prereg.yaml`)
+
+    **Why:** NB02 showed that A1 (GDN) solves N = N\\* = 32 pairs at 99% *without* clutter (it breaks the plateau at
+    ~1,900 steps), but with F = 512 clutter tokens it never leaves chance in 6,000 steps (A1 and A2 at 0.04%). With
+    every arm at zero, Phase 1 could not show whether Engram helps. This pilot finds the clutter level where A1 still
+    learns, and gives the Phase 1 step budget from that run's curve.
+
+    **Runs (A1 only, N = N\\*, P = 64, placement a, 6,000 steps, val recall every 250 steps):**
+
+    | F (clutter tokens) | filler loss λ | purpose |
+    |---|---|---|
+    | 64 | 1 | backup level, in case 128 already fails |
+    | 128 | 1 | design level |
+    | 256 | 1 | design level |
+    | 512 | 0 | is the filler loss what blocks learning at 512? |
+
+    **Pre-registered rule (PREREG.md):** primary F = the largest of {256, 128} where A1's max val recall ≥ 0.5;
+    `phase1_steps` = the 98% rule on that run's curve. If neither learns, the notebook **stops** and you decide
+    (the F = 64 and λ = 0 runs inform that decision).
+
+    **Outputs:** the pilot table and curves, `results/prereg.proposed.yaml` (N_star, phase1_steps, primary F) and the
+    Phase 1 GPU-hour estimate.
+    """),
+    *setup_cells(gpu=True),
+    md("## E0.7 · clutter pilot runs"),
+    *sweep_cells(["E0.7"], 1.0),
+    md("## Result: which clutter level does A1 still learn?"),
+    code("""
+    import yaml
+    from engramdelta import analysis
+    pr = yaml.safe_load(open("configs/prereg.yaml"))
+    N_STAR = int(pr["N_star"])
+    rows = analysis.clutter_pilot("results", N=N_STAR)
+    print(f"A1 at N={N_STAR}, P=64, placement a, 6000 steps   (chance = 1/2048 = 0.0005)")
+    print(f"{'F':>4} {'lambda':>6} {'max val recall':>15} {'final':>7} {'learned':>8} {'first step >= 98% of max':>25} {'min':>5}")
+    for x in rows:
+        print(f"{x['F']:>4} {x['lam']:>6g} {x['max_val_recall']:>15.3f} {x['final_val_recall']:>7.3f} {str(x['learned']):>8} "
+              f"{x['first_step_at_98pct'] if x['learned'] else '-':>25} {x['train_seconds'] / 60:>5.1f}")
+    for x in rows:
+        print(f"  F={x['F']} lambda={x['lam']:g} curve:", [(st, round(v, 3)) for st, v in x["curve"]])
+
+    import matplotlib.pyplot as plt
+    os.makedirs("figures", exist_ok=True)
+    fig, ax = plt.subplots(figsize=(7, 4))
+    for x in rows:
+        st, v = zip(*x["curve"])
+        ax.plot(st, v, linewidth=2, label=f"F={x['F']}, lambda={x['lam']:g}")
+    ax.set_xlabel("step"); ax.set_ylabel("val recall"); ax.set_ylim(0, 1.02)
+    ax.set_title(f"E0.7 clutter pilot: A1 at N={N_STAR}"); ax.legend(frameon=False)
+    for side in ("top", "right"):
+        ax.spines[side].set_visible(False)
+    fig.savefig("figures/E0.7_clutter_pilot.png", dpi=150, bbox_inches="tight"); plt.show()
+
+    if len(rows) < 4:
+        print("!! only", len(rows), "of 4 pilot runs finished (session time?). Rerun with this notebook's output in PREV_OUTPUTS.")
+    choice = analysis.primary_f_rule(rows)
+    if choice is None:
+        raise RuntimeError("STOP: A1 did not reach 0.5 val recall at F=256 or F=128. Bring this table back for a decision "
+                           "(see the F=64 and lambda=0 rows).")
+    PRIMARY_F, PHASE1_STEPS = choice["F"], choice["proposal"]
+    print(f"\\n>> primary F = {PRIMARY_F}   (largest of 256, 128 where A1 learns)")
+    print(f">> phase1_steps = {PHASE1_STEPS}   (first step >= 98% of max at F={PRIMARY_F}: {choice['first_step_at_98pct']}, rounded up to 500)")
+    """),
+    md("## Proposed pre-registered values and the Phase 1 budget (from measured throughput)"),
+    code("""
+    prop = dict(pr, phase1_steps=PHASE1_STEPS, primary_cell=dict(pr["primary_cell"], F=PRIMARY_F))
+    yaml.safe_dump(prop, open("configs/prereg.proposed.yaml", "w"), sort_keys=False)
+    shutil.copy2("configs/prereg.proposed.yaml", "results/prereg.proposed.yaml")   # also in the output / zip
+    print(open("configs/prereg.proposed.yaml").read())
+    tmp = dict(prop, lr={"A1": 1e-3, "A2": 1e-3, "T1": 1e-3})     # LRs are not known yet; they do not change run time
+    yaml.safe_dump(tmp, open("/tmp/prereg_budget.yaml", "w"))
+    run("python -m engramdelta.scripts.make_manifest --group all-phase1 --prereg /tmp/prereg_budget.yaml --out /tmp/manifests_p1")
+    run(f"python -m engramdelta.scripts.budget '/tmp/manifests_p1/*.yaml' --nproc {NPROC} --quota-hours 13", check=False)
+    """),
+    md("""
+    ## Your turn (no GPU needed)
+    1. Download `04_phase0_clutter_pilot_results.zip` and give it to Claude, or read the two `>>` lines above.
+    2. If the budget says OVER BUDGET, decide on cuts **before** committing.
+    3. Copy `phase1_steps` and `primary_cell.F` from `results/prereg.proposed.yaml` into `configs/prereg.yaml`, fill the
+       PREREG.md "Phase 0 outcomes" table, commit, push, and put the commit hash in PREREG.md and as `REPO_REF` in
+       notebooks 10–14. Then run NB10.
     """),
     code(FINISH),
 ])

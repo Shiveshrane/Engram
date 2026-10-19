@@ -107,6 +107,35 @@ def n_star(df: pd.DataFrame, threshold: float = 0.9) -> Optional[int]:
     return int(ok["N"].max()) if len(ok) else None
 
 
+def curve_stats(r: dict, frac: float = 0.98, round_to: int = 500, min_learned: float = 0.5) -> Dict:
+    """Val-recall curve of one run with eval_every > 0, and the pre-registered step rule applied to it."""
+    curve = [(s, ev["recall"]) for s, ev in r.get("eval_curve", [])] + [(r["train"]["steps"], r["metrics"]["val_recall"])]
+    best = max(v for _, v in curve)
+    first = min(s for s, v in curve if v >= frac * best)
+    learned = best >= min_learned
+    return {"N": r["data"]["N"], "F": r["data"]["F"], "lam": r["data"]["filler_weight"], "max_val_recall": best,
+            "final_val_recall": r["metrics"]["val_recall"], "first_step_at_98pct": first, "learned": learned,
+            "proposal": int(math.ceil(first / round_to) * round_to) if learned else None, "curve": curve,
+            "train_seconds": r["train_seconds"], "tok_per_s": r["throughput_tokens_per_s"]}
+
+
+def clutter_pilot(results_dir: str = "results", N: Optional[int] = None) -> List[Dict]:
+    """E0.7 runs (A1 at N*, one clutter level each), sorted by (lambda, F)."""
+    rows = [dict(curve_stats(r), run_id=r["run_id"]) for r in read_results(os.path.join(results_dir, "phase0", "E0.7"))
+            if N is None or r["data"]["N"] == N]
+    return sorted(rows, key=lambda x: (-x["lam"], x["F"]))
+
+
+def primary_f_rule(rows: List[Dict], candidates=(256, 128)) -> Optional[Dict]:
+    """Pre-registered: primary F = the largest candidate F (lambda = 1) where A1's max val recall >= 0.5.
+    Returns that run's stats (its "proposal" is the Phase 1 step budget), or None (stop: the human decides)."""
+    by_f = {x["F"]: x for x in rows if x["lam"] == 1.0}
+    for F in candidates:
+        if F in by_f and by_f[F]["learned"]:
+            return by_f[F]
+    return None
+
+
 def step_budget_proposal(results_dir: str = "results", N: Optional[int] = None, frac: float = 0.98,
                          round_to: int = 500, min_learned: float = 0.5) -> Dict:
     """E0.6 rule: first eval step where the arm's val recall >= frac * its maximum, rounded up to a multiple of round_to.
@@ -114,18 +143,9 @@ def step_budget_proposal(results_dir: str = "results", N: Optional[int] = None, 
     Only E0.6 runs with data.N == N are used (all runs if N is None). The rule is meaningless on a curve that never
     leaves chance, so "learned" is False (and "proposal" None) when the maximum val recall is below min_learned.
     """
-    out = {}
-    for r in read_results(os.path.join(results_dir, "phase0", "E0.6")):
-        if N is not None and r["data"]["N"] != N:
-            continue
-        curve = [(s, ev["recall"]) for s, ev in r.get("eval_curve", [])] + [(r["train"]["steps"], r["metrics"]["val_recall"])]
-        best = max(v for _, v in curve)
-        first = min(s for s, v in curve if v >= frac * best)
-        learned = best >= min_learned
-        out[r["arm"]] = {"N": r["data"]["N"], "max_val_recall": best, "first_step_at_98pct": first, "learned": learned,
-                         "proposal": int(math.ceil(first / round_to) * round_to) if learned else None, "curve": curve,
-                         "train_seconds": r["train_seconds"], "tok_per_s": r["throughput_tokens_per_s"]}
-    return out
+    return {r["arm"]: curve_stats(r, frac, round_to, min_learned)
+            for r in read_results(os.path.join(results_dir, "phase0", "E0.6"))
+            if N is None or r["data"]["N"] == N}
 
 
 def leak_table(df: pd.DataFrame, n_values: int = 2048) -> pd.DataFrame:

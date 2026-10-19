@@ -528,3 +528,41 @@ Diff: `.changelog/entries/0018/diff.patch`
 **What the change does:** NB02 now runs E0.4+E0.5 (4000 steps), computes test 7 and N*, stops with an error if test 7 fails, reports missing E0.5 runs, runs E0.6 at N*, and stops if A1 never exceeds 50% val recall instead of proposing a step budget. phase1_steps is A1's proposal (the written rule; it previously took the max over A1 and A2), and prereg.proposed.yaml is also copied into results/. SETUP prints the attached inputs, accepts globs in PREV_OUTPUTS, finds results/ and ckpt/ folders up to 4 levels deep (old outputs had engramdelta/results), and restores checkpoints only for runs without a result, so ~600 MB of finished-run checkpoints are not copied into the new output. PREREG.md: the rule text is updated and a 'Changes to these rules before the pre-registration commit' section records why and when.
 
 Diff: `.changelog/entries/0019/diff.patch`
+
+---
+
+## [0020] E0.7 clutter pilot group; Phase 1 cells follow the pilot's primary F
+*2026-10-20 02:44:39*
+
+- **File:** `engramdelta/scripts/make_manifest.py` (modified, +21/-9)
+  - **Lines:** 16-19 modified (were 16-17 before); 32-33 added; 127-131 added; 136-139 modified (were 127 before); 143 modified (were 131 before); 154-155 modified (were 142-143 before); 164 modified (were 152 before); 170 modified (were 158 before); 195 modified (were 183 before)
+- **File:** `engramdelta/analysis.py` (modified, +32/-12)
+  - **Lines:** 110-138 added; 146-148 modified (were 117-128 before)
+- **File:** `configs/prereg.yaml` (modified, +3/-3)
+  - **Lines:** 4-5 modified (were 4-5 before); 12 modified (were 12 before)
+- **File:** `tests/test_manifest.py` (modified, +22/-0)
+  - **Lines:** 43-64 added
+
+**Summary:** E0.7 clutter pilot group; Phase 1 cells follow the pilot's primary F
+
+**What the change does:** New manifest group E0.7: A1 at N=N*, P=64, a, 6000 steps with eval every 250, at F=64/128/256 (lambda=1) and F=512 (lambda=0). Phase 1 groups used a hard-coded F=512 as the clutter condition (and F=256 for the LR pilot); they now use primary_cell.F everywhere arms are compared under clutter (E1.0a, E1.0c, E1.2/E1.2r/E1.2l, the E1.1 P sweep, E1.3), refuse to build while it is null, and the A2 dose-response runs at the design levels other than the primary F. E1.1 keeps F in {128,256,512}; run counts stay 167. analysis gains curve_stats() (shared with step_budget_proposal), clutter_pilot() and primary_f_rule() (largest of 256,128 with max val recall >= 0.5). prereg.yaml: N_star=32 (the E0.4 rule result), primary_cell.F=null until the pilot. Tests cover the E0.7 cells and the primary-F wiring.
+
+Diff: `.changelog/entries/0020/diff.patch`
+
+---
+
+## [0021] Add notebook 04: E0.7 clutter pilot that proposes primary F and phase1_steps
+*2026-10-20 02:44:39*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +91/-0)
+  - **Lines:** 526-527 added; 530-618 added
+- **File:** `PREREG.md` (modified, +16/-4)
+  - **Lines:** 12 modified (were 12 before); 31-39 modified (were 31-33 before); 57-62 added
+- **File:** `README.md` (modified, +1/-0)
+  - **Lines:** 52 added
+
+**Summary:** Add notebook 04: E0.7 clutter pilot that proposes primary F and phase1_steps
+
+**What the change does:** New 04_phase0_clutter_pilot notebook (no inputs; N* from prereg.yaml): runs the 4 E0.7 runs (~0.55 GPU-h), prints the pilot table and curves, saves figures/E0.7_clutter_pilot.png, applies the pre-registered primary-F rule and stops with an error if neither F=256 nor F=128 learns, then writes results/prereg.proposed.yaml (phase1_steps, primary_cell.F) and prints the Phase 1 budget from measured throughput. NB02's instructions point to NB04 when E0.6 did not learn. PREREG.md: new primary-F and step-budget rules, primary cell F = primary F, and a dated entry explaining the change. README lists NB04.
+
+Diff: `.changelog/entries/0021/diff.patch`

@@ -40,3 +40,25 @@ def test_e06_needs_n_star(tmp_path):
     import pytest
     with pytest.raises(SystemExit):
         build("E0.6", dict(PREREG, N_star=None), str(tmp_path))
+
+
+def test_e07_clutter_pilot_cells(tmp_path):
+    e07 = build("E0.7", dict(PREREG, N_star=32), str(tmp_path))
+    cells = {(r["set"][3], r["set"][6]) for r in e07}          # data.F, data.filler_weight
+    assert cells == {("data.F=64", "data.filler_weight=1.0"), ("data.F=128", "data.filler_weight=1.0"),
+                     ("data.F=256", "data.filler_weight=1.0"), ("data.F=512", "data.filler_weight=0.0")}
+    assert all("data.N=32" in r["set"] and "train.eval_every=250" in r["set"] for r in e07)
+
+
+def test_phase1_uses_primary_f(tmp_path):
+    import pytest
+    pr = dict(PREREG, N_star=32, primary_cell=dict(PREREG["primary_cell"], F=256))
+    counts = {g: len(build(g, pr, str(tmp_path))) for g in EXPECTED if g.startswith("E1")}
+    assert sum(counts.values()) == 167
+    e12 = build("E1.2", pr, str(tmp_path))
+    Fs = {s for r in e12 for s in r["set"] if s.startswith("data.F=")}
+    assert Fs == {"data.F=0", "data.F=256", "data.F=128", "data.F=512"}        # 256 = arms; 128, 512 = A2 dose
+    for g in ("E1.0a", "E1.0c", "E1.3"):
+        assert all("data.F=256" in r["set"] for r in build(g, pr, str(tmp_path)))
+    with pytest.raises(SystemExit):
+        build("E1.1", dict(pr, primary_cell=dict(pr["primary_cell"], F=None)), str(tmp_path))

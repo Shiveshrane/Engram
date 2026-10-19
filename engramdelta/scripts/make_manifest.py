@@ -13,8 +13,10 @@ Pre-registered resolution rules (also in PREREG.md):
                   A3, A4 use A2's LR; A5, A6, A1_noGconv use A1's; A2_* use A2's.
   Phase 2 tokens  tokens = min(phase2_max_tokens, 0.9 * min(throughput of A1, A2 in E2.0) * hours_per_run * 3600),
                   rounded down to a whole number of 65,536-token steps.
-  E0.6 N          N = N_star from prereg.yaml if set, otherwise N_star computed from the finished E0.4 results
-                  (largest N with A1 mean recall >= 0.9). E0.6 therefore runs after E0.4.
+  E0.6 / E0.7 N   N = N_star from prereg.yaml if set, otherwise N_star computed from the finished E0.4 results
+                  (largest N with A1 mean recall >= 0.9). E0.6 / E0.7 therefore run after E0.4.
+  Primary F       primary_cell.F comes from the E0.7 clutter pilot (largest F in {256, 128} where A1 reaches 0.5 val
+                  recall). Every Phase 1 cell that compares arms "under clutter" uses it; E1.1 keeps F in {128, 256, 512}.
 """
 import argparse
 import os
@@ -27,6 +29,8 @@ from ..utils.run_log import read_results
 
 PHASE0_N = [16, 32, 64, 128, 256]
 PHASE0_STEPS = 4000      # E0.4 / E0.5 training steps (pre-registered; the value of the first NB02 run)
+DESIGN_F = (128, 256, 512)   # the design's clutter levels (design §7.2), besides F = 0
+E07_CELLS = [(64, 1.0), (128, 1.0), (256, 1.0), (512, 0.0)]   # clutter pilot: (F, lambda)
 LR_INHERIT = {"A3": "A2", "A4": "A2", "A5": "A1", "A6": "A1", "A1_noGconv": "A1",
               "A2_noEconv": "A2", "A2_noGconv": "A2", "A2_noboth": "A2"}
 
@@ -120,15 +124,23 @@ def build(group: str, pr: dict, results_dir: str) -> List[dict]:
         for arm in ("A1", "A2"):
             runs.append(mqar_run(group, "phase1", arm, 0, N, 512, 64, "a",
                                  extra=["phase=phase0", "train.steps=6000", "train.eval_every=250"]))
+    elif group == "E0.7":      # clutter pilot: which clutter level still lets A1 learn (sets primary F + step budget)
+        N = e06_n(pr, results_dir)
+        for F, lam in E07_CELLS:
+            runs.append(mqar_run(group, "phase1", "A1", 0, N, F, 64, "a", lam,
+                                 extra=["phase=phase0", "train.steps=6000", "train.eval_every=250"]))
     elif group.startswith("E1"):
         Ns = need(pr, "N_star")
         steps = need(pr, "phase1_steps")
         pc = pr["primary_cell"]
-        cells_6 = [(N, 0, "a") for N in (Ns, 2 * Ns)] + [(N, 512, pl) for N in (Ns, 2 * Ns) for pl in ("a", "b")]
+        if pc.get("F") in (None, "", "null"):
+            sys.exit("configs/prereg.yaml: 'primary_cell.F' is not set yet (from the E0.7 clutter pilot, NB04)")
+        Fp = int(pc["F"])
+        cells_6 = [(N, 0, "a") for N in (Ns, 2 * Ns)] + [(N, Fp, pl) for N in (Ns, 2 * Ns) for pl in ("a", "b")]
         if group == "E1.0a":
             for arm in ("A1", "A2", "T1"):
                 for lr in pr["lr_candidates"]:
-                    runs.append(mqar_run(group, "phase1", arm, 0, Ns, 256, 64, "a", 1.0, lr, steps))
+                    runs.append(mqar_run(group, "phase1", arm, 0, Ns, Fp, 64, "a", 1.0, lr, steps))
             return runs
         lrs = resolve_lrs(pr, results_dir)
         if group == "E1.0c":
@@ -139,8 +151,8 @@ def build(group: str, pr: dict, results_dir: str) -> List[dict]:
             cells = []
             for N in (Ns, 2 * Ns):
                 cells.append((N, 0, 64, "a"))
-                cells += [(N, F, 64, pl) for F in (128, 256, 512) for pl in ("a", "b")]
-            cells += [(Ns, 512, P, pl) for P in (8, 512) for pl in ("a", "b")]
+                cells += [(N, F, 64, pl) for F in DESIGN_F for pl in ("a", "b")]
+            cells += [(Ns, Fp, P, pl) for P in (8, 512) for pl in ("a", "b")]
             for (N, F, P, pl) in cells:
                 runs += [mqar_run(group, "phase1", "A1", s, N, F, P, pl, 1.0, lrs["A1"], steps,
                                   extra=["train.save_final=true"]) for s in seeds]
@@ -149,13 +161,13 @@ def build(group: str, pr: dict, results_dir: str) -> List[dict]:
                 for (N, F, pl) in cells_6:
                     runs += [mqar_run(group, "phase1", arm, s, N, F, 64, pl, 1.0, lrs[arm], steps,
                                       extra=["train.save_final=true"]) for s in seeds]
-            for F in (128, 256):
+            for F in [f for f in DESIGN_F if f != Fp]:      # A2 dose-response at the other design levels
                 runs += [mqar_run(group, "phase1", "A2", s, Ns, F, 64, "a", 1.0, lrs["A2"], steps,
                                   extra=["train.save_final=true"]) for s in seeds]
         elif group == "E1.2r":
             runs += [mqar_run(group, "phase1", "T1", 0, N, F, 64, pl, 1.0, lrs["T1"], steps) for (N, F, pl) in cells_6]
         elif group == "E1.2l":
-            runs += [mqar_run(group, "phase1", "A6", 0, 2 * Ns, 512, 64, pl, 1.0, lrs["A6"], steps) for pl in ("a", "b")]
+            runs += [mqar_run(group, "phase1", "A6", 0, 2 * Ns, Fp, 64, pl, 1.0, lrs["A6"], steps) for pl in ("a", "b")]
         elif group == "E1.3":
             for arm in ("A2_noEconv", "A2_noGconv", "A2_noboth", "A1_noGconv"):
                 runs += [mqar_run(group, "phase1", arm, s, Ns, pc["F"], pc["P"], pc["placement"], 1.0, lrs[arm], steps)
@@ -180,7 +192,7 @@ def build(group: str, pr: dict, results_dir: str) -> List[dict]:
 
 
 GROUP_SETS = {
-    "all-phase0": ["E0.3", "E0.4", "E0.5", "E0.6"],
+    "all-phase0": ["E0.3", "E0.4", "E0.5", "E0.6", "E0.7"],
     "all-phase1": ["E1.0a", "E1.0c", "E1.1", "E1.2", "E1.2r", "E1.2l", "E1.3"],
     "all-phase2": ["E2.0", "E2.1", "E2.2"],
 }

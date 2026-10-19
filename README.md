@@ -49,6 +49,7 @@ python -m engramdelta.scripts.param_table --phase phase1
 | `00_env_and_kernels` | T4 x2 | 0.75 | NCCL/DDP smoke test, FLA vs PyTorch kernel check + speed, DDP speedup. Picks `GDN_BACKEND` |
 | `01_phase0_tests` | T4 x2 | 0.5 | full test suite on GPU, NCCL DDP checks, parameter tables, determinism (E0.3) |
 | `02_phase0_known_result` | T4 x2 | 1.75 | E0.4 to E0.6. Proposes N\*, the step budget and the Phase 1 budget. **You fill `configs/prereg.yaml` and commit it** |
+| `04_phase0_clutter_pilot` | T4 x2 | 0.55 | E0.7: which clutter level A1 still learns at N\*. Sets the primary F and `phase1_steps` |
 | `03_lm_data_prep` | CPU | 0 | tokenizer + FineWeb-Edu shards. Publish the output as the Kaggle Dataset `engramdelta-lmdata` |
 | `10_phase1_pilot` | T4 x2 | 1.1 | E1.0a LR pilot, E1.0c lambda check |
 | `11_phase1_H1_grid` | T4 x2 | 4.1 | E1.1 |

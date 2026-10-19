@@ -1,15 +1,15 @@
 # Machine-readable pre-registered values (see PREREG.md for the rules).
 # Fill the null entries after Phase 0 (NB02 prints proposals), then COMMIT this file before any Phase 1 run
 # and record the commit hash in PREREG.md. make_manifest.py refuses to build a group whose values are missing.
-N_star: null                 # largest N with A1 mean recall >= 0.9 on plain MQAR (E0.4)
-phase1_steps: null           # from E0.6: first eval step where A1 val recall >= 0.98 * its max, rounded up to 500
+N_star: 32                   # largest N with A1 mean recall >= 0.9 on plain MQAR (E0.4, NB02: A1 99.8% / 98.9% / 2.0% at N = 16 / 32 / 64)
+phase1_steps: null           # from E0.7 (NB04): first eval step where A1 val recall >= 0.98 * its max at the primary F, rounded up to 500
 seeds: [0, 1, 2]
 lr_candidates: [3.0e-4, 1.0e-3, 3.0e-3]
 lr:                          # "auto" = best val_recall in E1.0a (ties -> smaller LR); or a number
   A1: auto
   A2: auto
   T1: auto
-primary_cell: {F: 512, P: 64, placement: a, filler_weight: 1.0}   # N = N_star
+primary_cell: {F: null, P: 64, placement: a, filler_weight: 1.0}   # N = N_star; F from E0.7 (NB04): largest of 256, 128 where A1 learns
 phase2_train_tokens: auto    # "auto" = rule from E2.0 throughput (see make_manifest.py); or an int
 phase2_hours_per_run: 1.7
 phase2_max_tokens: 150000000

@@ -2716,6 +2716,192 @@
           "after_hash": "bf87997e1fde"
         }
       ]
+    },
+    {
+      "id": "0020",
+      "time": "2026-10-20 02:44:39",
+      "summary": "E0.7 clutter pilot group; Phase 1 cells follow the pilot's primary F",
+      "explanation": "New manifest group E0.7: A1 at N=N*, P=64, a, 6000 steps with eval every 250, at F=64/128/256 (lambda=1) and F=512 (lambda=0). Phase 1 groups used a hard-coded F=512 as the clutter condition (and F=256 for the LR pilot); they now use primary_cell.F everywhere arms are compared under clutter (E1.0a, E1.0c, E1.2/E1.2r/E1.2l, the E1.1 P sweep, E1.3), refuse to build while it is null, and the A2 dose-response runs at the design levels other than the primary F. E1.1 keeps F in {128,256,512}; run counts stay 167. analysis gains curve_stats() (shared with step_budget_proposal), clutter_pilot() and primary_f_rule() (largest of 256,128 with max val recall >= 0.5). prereg.yaml: N_star=32 (the E0.4 rule result), primary_cell.F=null until the pilot. Tests cover the E0.7 cells and the primary-F wiring.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/make_manifest.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "16-19",
+              "old": "16-17"
+            },
+            {
+              "kind": "added",
+              "new": "32-33",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "127-131",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "136-139",
+              "old": "127"
+            },
+            {
+              "kind": "modified",
+              "new": "143",
+              "old": "131"
+            },
+            {
+              "kind": "modified",
+              "new": "154-155",
+              "old": "142-143"
+            },
+            {
+              "kind": "modified",
+              "new": "164",
+              "old": "152"
+            },
+            {
+              "kind": "modified",
+              "new": "170",
+              "old": "158"
+            },
+            {
+              "kind": "modified",
+              "new": "195",
+              "old": "183"
+            }
+          ],
+          "added": 21,
+          "removed": 9,
+          "before_existed": true,
+          "after_hash": "9ca59d99a327"
+        },
+        {
+          "path": "engramdelta/analysis.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "110-138",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "146-148",
+              "old": "117-128"
+            }
+          ],
+          "added": 32,
+          "removed": 12,
+          "before_existed": true,
+          "after_hash": "15ac4dd0f3e9"
+        },
+        {
+          "path": "configs/prereg.yaml",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "4-5",
+              "old": "4-5"
+            },
+            {
+              "kind": "modified",
+              "new": "12",
+              "old": "12"
+            }
+          ],
+          "added": 3,
+          "removed": 3,
+          "before_existed": true,
+          "after_hash": "7bda46ddc260"
+        },
+        {
+          "path": "tests/test_manifest.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "43-64",
+              "old": null
+            }
+          ],
+          "added": 22,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "280acb76854a"
+        }
+      ]
+    },
+    {
+      "id": "0021",
+      "time": "2026-10-20 02:44:39",
+      "summary": "Add notebook 04: E0.7 clutter pilot that proposes primary F and phase1_steps",
+      "explanation": "New 04_phase0_clutter_pilot notebook (no inputs; N* from prereg.yaml): runs the 4 E0.7 runs (~0.55 GPU-h), prints the pilot table and curves, saves figures/E0.7_clutter_pilot.png, applies the pre-registered primary-F rule and stops with an error if neither F=256 nor F=128 learns, then writes results/prereg.proposed.yaml (phase1_steps, primary_cell.F) and prints the Phase 1 budget from measured throughput. NB02's instructions point to NB04 when E0.6 did not learn. PREREG.md: new primary-F and step-budget rules, primary cell F = primary F, and a dated entry explaining the change. README lists NB04.",
+      "files": [
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "526-527",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "530-618",
+              "old": null
+            }
+          ],
+          "added": 91,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "05fa82e32d37"
+        },
+        {
+          "path": "PREREG.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "12",
+              "old": "12"
+            },
+            {
+              "kind": "modified",
+              "new": "31-39",
+              "old": "31-33"
+            },
+            {
+              "kind": "added",
+              "new": "57-62",
+              "old": null
+            }
+          ],
+          "added": 16,
+          "removed": 4,
+          "before_existed": true,
+          "after_hash": "6bf11b3f2850"
+        },
+        {
+          "path": "README.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "52",
+              "old": null
+            }
+          ],
+          "added": 1,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "4f17fb4f1356"
+        }
+      ]
     }
   ]
 }
