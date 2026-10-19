@@ -57,9 +57,10 @@ WORK = pathlib.Path("/kaggle/working") if ON_KAGGLE else pathlib.Path.cwd()
 # repo is the parent directory.
 REPO = pathlib.Path("/tmp/engramdelta") if ON_KAGGLE else (WORK.parent if WORK.name == "notebooks" else WORK)
 
-# 0. session log: everything this notebook prints (and every error traceback) also goes to
-#    logs/<notebook>__<UTC start>.log, with elapsed seconds per line. After every cell, the log and the whole
-#    results/ folder (result JSONs + per-run training logs) are zipped into <notebook>_results.zip in the output.
+# 0. run.log: everything this notebook prints (every command, every training step, every error traceback) is also
+#    written, live, to run.log at the top of the notebook output, with elapsed seconds per line. Each training run
+#    also gets its own log, results/_logs/<group>/<run_id>.log. After every cell, results/ (result JSONs + all logs,
+#    no checkpoints) is zipped into <notebook>_results.zip. All three are in the Output tab, ready to download.
 class _Tee:
     _engram_tee = True
     def __init__(self, stream, f, t0):
@@ -79,9 +80,10 @@ class _Tee:
         return getattr(self._s, k)
 
 if not getattr(sys.stdout, "_engram_tee", False):      # setup cell re-run: keep the existing log
-    LOG_DIR = WORK / "logs"; LOG_DIR.mkdir(parents=True, exist_ok=True)
-    LOG_PATH = LOG_DIR / f"{NB_NAME}__{datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')}.log"
+    _STAMP = datetime.datetime.now(datetime.timezone.utc).strftime('%Y%m%dT%H%M%SZ')
+    LOG_PATH = WORK / "run.log"
     _LOG = open(LOG_PATH, "a", buffering=1)
+    _LOG.write(f"===== {NB_NAME} | started {_STAMP} (UTC) =====\\n")
     _T0 = time.time()
     sys.stdout, sys.stderr = _Tee(sys.stdout, _LOG, _T0), _Tee(sys.stderr, _LOG, _T0)
 ZIP_PATH = WORK / f"{NB_NAME}_results.zip"
@@ -93,7 +95,7 @@ def bundle():
         if not res.is_dir():
             return
         dst = res / "_logs" / "notebooks"; dst.mkdir(parents=True, exist_ok=True)
-        _LOG.flush(); shutil.copy2(LOG_PATH, dst / LOG_PATH.name)
+        _LOG.flush(); shutil.copy2(LOG_PATH, dst / f"{NB_NAME}__{_STAMP}.log")
         tmp = ZIP_PATH.with_name(ZIP_PATH.name + ".tmp")
         with zipfile.ZipFile(tmp, "w", zipfile.ZIP_DEFLATED) as z:
             for root, _, files in os.walk(res):
@@ -118,8 +120,12 @@ def _engram_post(result=None):
     bundle()
 _ip.events.register("pre_run_cell", _engram_pre)
 _ip.events.register("post_run_cell", _engram_post)
-print(f"session log: {LOG_PATH}")
-print(f"results zip (rebuilt after every cell): {ZIP_PATH}")
+print("=" * 100)
+print(f"LOGS  run.log (this whole notebook, live)  -> {LOG_PATH}")
+print(f"      one log per training run             -> {REPO / 'results' / '_logs'}/<group>/<run_id>.log")
+print(f"      everything zipped after every cell   -> {ZIP_PATH}")
+print("      Download from the notebook's Output tab (run.log and the zip are at the top level).")
+print("=" * 100)
 
 def run(cmd, check=True, env=None, timeout=None, show=None):
     """Run a shell command in the repo and stream its output into this notebook."""
@@ -229,7 +235,26 @@ print(f"\\nTo send the results back: Output tab -> download {ZIP_PATH.name} ({_m
       "and unzip it into the repo folder:")
 print(f"    unzip -n {ZIP_PATH.name} -d <your Engram repo>     # -n: never overwrite existing files")
 print("It holds results/ (result JSONs), results/_logs/<group>/<run_id>.log (each run's training log)")
-print(f"and results/_logs/notebooks/{LOG_PATH.name} (this notebook's full printed output).")
+print(f"and results/_logs/notebooks/{NB_NAME}__{_STAMP}.log (a copy of run.log).")
+print(f"run.log alone (this notebook's full printed output) is also in the Output tab: {LOG_PATH}")
+'''
+
+
+LOGS_MD_MARK = "### Logs and downloads"
+LOGS_MD = '''
+### Logs and downloads (created automatically while this notebook runs)
+
+Everything appears in this notebook's **Output** tab (`/kaggle/working`) and can be downloaded directly:
+
+| File | What it contains |
+|---|---|
+| `run.log` | **The whole run**: everything this notebook prints, live, with elapsed seconds per line: every command, every training step, every warning and the full traceback of any failed cell |
+| `results/_logs/<group>/<run_id>.log` | One log per training run (the full output of that run, both GPUs) |
+| `__NB_NAME___results.zip` | Rebuilt after every cell: `results/` (result JSONs + all the logs above, no checkpoints). **Download this one** |
+
+To hand the results back: download `__NB_NAME___results.zip` and run
+`unzip -n __NB_NAME___results.zip -d <your Engram repo>`. If the session dies, `run.log` and the per-run logs
+still hold everything up to that moment. The code itself is cloned to `/tmp` and is **not** part of the output.
 '''
 
 
@@ -753,6 +778,8 @@ def main():
     for name, nb in NB.items():
         for c in nb["cells"]:
             c["source"] = c["source"].replace("__NB_NAME__", name)
+        if not any(LOGS_MD_MARK in c["source"] for c in nb["cells"]):
+            nb["cells"].insert(1, md(LOGS_MD.replace("__NB_NAME__", name)))
         path = os.path.join(HERE, f"{name}.ipynb")
         with open(path, "w") as f:
             json.dump(nb, f, indent=1)

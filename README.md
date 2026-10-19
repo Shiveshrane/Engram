@@ -61,10 +61,10 @@ python -m engramdelta.scripts.param_table --phase phase1
 
 All runs are resumable. Re-running a notebook skips finished runs and continues unfinished ones from their checkpoint.
 
-**What a notebook's output contains.** Only what the session creates: `results/`, `figures/`, `logs/`, the results zip, and `ckpt/` for runs that stopped at the time limit (a finished run's resume checkpoint is deleted). The code is cloned to `/tmp/engramdelta`, which Kaggle does not save.
+**What a notebook's output contains.** Only what the session creates: `run.log`, `results/`, `figures/`, the results zip, and `ckpt/` for runs that stopped at the time limit (a finished run's resume checkpoint is deleted). The code is cloned to `/tmp/engramdelta`, which Kaggle does not save.
 
 **Logs and results download.** Every notebook writes its full printed output (with elapsed seconds and the traceback
-of any failed cell) to `logs/<notebook>__<UTC start>.log`, and every training run's output to
+of any failed cell) live to `run.log` at the top of its output, and every training run's output to
 `results/_logs/<group>/<run_id>.log`. After every cell, `results/` (result JSONs + all logs, no checkpoints) is zipped
 into `<notebook>_results.zip` in the notebook's output. Download that zip from the Output tab and unzip it into the
 repo with `unzip -n <notebook>_results.zip -d <repo>`.

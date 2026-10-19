@@ -2329,6 +2329,94 @@
           "after_hash": "fb9bc6b35f5a"
         }
       ]
+    },
+    {
+      "id": "0016",
+      "time": "2026-10-20 01:40:57",
+      "summary": "Notebook log is now run.log at the top of the output; every notebook documents its logs",
+      "explanation": "The session log used to be logs/<notebook>__<UTC>.log, which was easy to miss. SETUP now writes it live to /kaggle/working/run.log (fixed name, top level of the Output tab) with a header line naming the notebook and start time, and prints a banner with the paths of run.log, the per-run logs (results/_logs/<group>/<run_id>.log) and the results zip. bundle() copies run.log into results/_logs/notebooks/<notebook>__<UTC>.log so the zip carries it. main() inserts a 'Logs and downloads' markdown cell as the second cell of every notebook explaining the three files and how to download/unzip them. run.log added to .gitignore.",
+      "files": [
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "60-63",
+              "old": "60-62"
+            },
+            {
+              "kind": "modified",
+              "new": "83-84",
+              "old": "82-83"
+            },
+            {
+              "kind": "added",
+              "new": "86",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "98",
+              "old": "96"
+            },
+            {
+              "kind": "modified",
+              "new": "123-128",
+              "old": "121-122"
+            },
+            {
+              "kind": "modified",
+              "new": "238-257",
+              "old": "232"
+            },
+            {
+              "kind": "added",
+              "new": "781-782",
+              "old": null
+            }
+          ],
+          "added": 36,
+          "removed": 9,
+          "before_existed": true,
+          "after_hash": "bb9e480b8eca"
+        },
+        {
+          "path": ".gitignore",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "14",
+              "old": null
+            }
+          ],
+          "added": 1,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "49f57b9691fb"
+        },
+        {
+          "path": "README.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "64",
+              "old": "64"
+            },
+            {
+              "kind": "modified",
+              "new": "67",
+              "old": "67"
+            }
+          ],
+          "added": 2,
+          "removed": 2,
+          "before_existed": true,
+          "after_hash": "ed6e31534d75"
+        }
+      ]
     }
   ]
 }

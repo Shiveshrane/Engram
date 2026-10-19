@@ -11,3 +11,4 @@ GIT_COMMIT
 logs/
 *_results.zip
 *_results.zip.tmp
+run.log

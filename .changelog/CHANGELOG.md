@@ -458,3 +458,21 @@ Diff: `.changelog/entries/0014/diff.patch`
 **What the change does:** SETUP used to clone the repo into /kaggle/working/engramdelta, so every notebook output contained the whole code tree. REPO is now /tmp/engramdelta on Kaggle (not saved), and results/ and figures/ are symlinked from the repo to /kaggle/working/results and /kaggle/working/figures, so all existing relative paths still work. The output now contains only results/, figures/, logs/, ckpt/ (unfinished runs) and the results zip. restore() reads PREV_OUTPUTS from <prev>/results and, for outputs made before this change, <prev>/engramdelta/results. All .ipynb files were regenerated.
 
 Diff: `.changelog/entries/0015/diff.patch`
+
+---
+
+## [0016] Notebook log is now run.log at the top of the output; every notebook documents its logs
+*2026-10-20 01:40:57*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +36/-9)
+  - **Lines:** 60-63 modified (were 60-62 before); 83-84 modified (were 82-83 before); 86 added; 98 modified (were 96 before); 123-128 modified (were 121-122 before); 238-257 modified (were 232 before); 781-782 added
+- **File:** `.gitignore` (modified, +1/-0)
+  - **Lines:** 14 added
+- **File:** `README.md` (modified, +2/-2)
+  - **Lines:** 64 modified (were 64 before); 67 modified (were 67 before)
+
+**Summary:** Notebook log is now run.log at the top of the output; every notebook documents its logs
+
+**What the change does:** The session log used to be logs/<notebook>__<UTC>.log, which was easy to miss. SETUP now writes it live to /kaggle/working/run.log (fixed name, top level of the Output tab) with a header line naming the notebook and start time, and prints a banner with the paths of run.log, the per-run logs (results/_logs/<group>/<run_id>.log) and the results zip. bundle() copies run.log into results/_logs/notebooks/<notebook>__<UTC>.log so the zip carries it. main() inserts a 'Logs and downloads' markdown cell as the second cell of every notebook explaining the three files and how to download/unzip them. run.log added to .gitignore.
+
+Diff: `.changelog/entries/0016/diff.patch`
