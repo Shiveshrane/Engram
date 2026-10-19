@@ -2069,6 +2069,84 @@
           "after_hash": "160fa040f5cf"
         }
       ]
+    },
+    {
+      "id": "0011",
+      "time": "2026-10-19 21:04:35",
+      "summary": "NB02: run E0.6 first and train E0.4/E0.5 for the measured step count",
+      "explanation": "NB02 previously ran E0.6, E0.4 and E0.5 in one sweep with E0.4 fixed at 2000 steps. A local check showed MQAR's plateau (recall stuck at 1/N) can last ~1000 steps even at N=8, so 2000 steps may be too short at large N and waste ~1.8 GPU-h. NB02 now runs E0.6 alone, prints the val-recall curve, sets E04_STEPS by a pre-registered rule (A1's 98%-of-max step clamped to [2000, 4000], overridable), and passes it to the E0.4/E0.5 sweep via --extra-set; PREREG.md records the rule.",
+      "files": [
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "316",
+              "old": "316"
+            },
+            {
+              "kind": "modified",
+              "new": "318-323",
+              "old": "318-320"
+            },
+            {
+              "kind": "added",
+              "new": "326-327",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "337-355",
+              "old": "332"
+            }
+          ],
+          "added": 28,
+          "removed": 5,
+          "before_existed": true,
+          "after_hash": "bb108af4efaf"
+        },
+        {
+          "path": "notebooks/02_phase0_known_result.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "6",
+              "old": "6"
+            },
+            {
+              "kind": "added",
+              "new": "23-27",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "32-51",
+              "old": "27"
+            }
+          ],
+          "added": 26,
+          "removed": 2,
+          "before_existed": true,
+          "after_hash": "e8f4f5202670"
+        },
+        {
+          "path": "PREREG.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "29",
+              "old": null
+            }
+          ],
+          "added": 1,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "87fc9a5a91b3"
+        }
+      ]
     }
   ]
 }

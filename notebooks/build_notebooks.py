@@ -313,13 +313,18 @@ NB["01_phase0_tests"] = notebook([
 
 NB["02_phase0_known_result"] = notebook([
     md('''
-    # 02 · Phase 0 known result, leak test, step budget  (~1.75 GPU-h)
+    # 02 · Phase 0 known result, leak test, step budget  (~2–3 GPU-h)
 
-    **Runs**
-    * **E0.6** (first, so the real per-run time is known early): A1 and A2 at (N=64, F=512, P=64, a), 6,000 steps with
-      val recall every 250 steps. This gives the step-budget curve.
+    **Stage 1: E0.6.** A1 and A2 at (N=64, F=512, P=64, a), 6,000 steps, with val recall every 250 steps
+    (~30 min). MQAR has a long plateau (recall stuck at 1/N) before the model suddenly learns the key→value
+    binding. This curve shows when that happens, and gives the real per-run time.
+
+    **Stage 2, with the step count from stage 1** (pre-registered rule: A1's first step ≥ 98% of its max val
+    recall, clamped to [2000, 4000]; or set `E04_STEPS` yourself):
     * **E0.4 (test 7):** vanilla linear attention (LA) vs GDN (A1) on plain MQAR, N ∈ {16, 32, 64, 128, 256}, 3 seeds; T1 at 1 seed.
     * **E0.5 (test 6 at scale):** the Engram-only probe A6 at every N; it must be at chance.
+
+    The budget line before stage 2 prints the E0.4 GPU-hours at that step count.
 
     **Outputs:** test-7 table and verdict, N\\* proposal, step-budget proposal, and the Phase 1 GPU-hour estimate from
     measured throughput.
@@ -329,7 +334,25 @@ NB["02_phase0_known_result"] = notebook([
     every Phase 1 notebook.
     '''),
     *setup_cells(gpu=True),
-    *sweep_cells(["E0.6", "E0.4", "E0.5"], 2.5),
+    md("## Stage 1 · E0.6: training curve and real per-run time"),
+    *sweep_cells(["E0.6"], 1.0),
+    code('''
+    from engramdelta import analysis
+    E04_STEPS = "auto"      # "auto" = pre-registered rule below, or an int (e.g. 3000) to override
+    sb = analysis.step_budget_proposal("results")
+    for arm, v in sb.items():
+        print(f"{arm}: max val recall {v['max_val_recall']:.3f}, first step >= 98% of max: {v['first_step_at_98pct']} "
+              f"-> proposal {v['proposal']} | {v['tok_per_s']:.0f} tok/s, {v['train_seconds'] / 60:.1f} min for 6000 steps")
+        print("   curve (step, val recall):", [(s, round(r, 3)) for s, r in v["curve"]])
+    if E04_STEPS == "auto":
+        E04_STEPS = int(min(4000, max(2000, sb["A1"]["proposal"])))
+    if sb["A1"]["max_val_recall"] < 0.5:
+        print("!! A1 stayed below 50% val recall for all 6000 steps at N=64, F=512. Look at the curve; E0.4 at small N may still"
+              " be fine, but consider a larger E04_STEPS before spending the E0.4 budget.")
+    print("\\n>> E0.4 / E0.5 will train for", E04_STEPS, "steps")
+    '''),
+    md("## Stage 2 · E0.4 (test 7) and E0.5 (leak test)"),
+    *sweep_cells(["E0.4", "E0.5"], 2.5, extra_expr='f"--extra-set train.steps={E04_STEPS}"'),
     md("## Test 7: known result (GDN vs vanilla linear attention)"),
     code('''
     from engramdelta import analysis

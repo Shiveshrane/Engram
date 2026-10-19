@@ -378,3 +378,21 @@ Diff: `.changelog/entries/0009/diff.patch`
 **What the change does:** NB00 on Kaggle showed fla.ops was not importable: flash-linear-attention 0.5.x is only a wrapper and the Triton kernels live in fla-core, which --no-deps skipped, so the FLA kernel was never tested. FLA_SPEC now defaults to fla-core==0.5.2; fla_available() records the import error in FLA_IMPORT_ERROR and bench_kernels prints and stores it; the NB00 version cell uses importlib.metadata instead of the missing fla.__version__.
 
 Diff: `.changelog/entries/0010/diff.patch`
+
+---
+
+## [0011] NB02: run E0.6 first and train E0.4/E0.5 for the measured step count
+*2026-10-19 21:04:35*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +28/-5)
+  - **Lines:** 316 modified (were 316 before); 318-323 modified (were 318-320 before); 326-327 added; 337-355 modified (were 332 before)
+- **File:** `notebooks/02_phase0_known_result.ipynb` (modified, +26/-2)
+  - **Lines:** 6 modified (were 6 before); 23-27 added; 32-51 modified (were 27 before)
+- **File:** `PREREG.md` (modified, +1/-0)
+  - **Lines:** 29 added
+
+**Summary:** NB02: run E0.6 first and train E0.4/E0.5 for the measured step count
+
+**What the change does:** NB02 previously ran E0.6, E0.4 and E0.5 in one sweep with E0.4 fixed at 2000 steps. A local check showed MQAR's plateau (recall stuck at 1/N) can last ~1000 steps even at N=8, so 2000 steps may be too short at large N and waste ~1.8 GPU-h. NB02 now runs E0.6 alone, prints the val-recall curve, sets E04_STEPS by a pre-registered rule (A1's 98%-of-max step clamped to [2000, 4000], overridable), and passes it to the E0.4/E0.5 sweep via --extra-set; PREREG.md records the rule.
+
+Diff: `.changelog/entries/0011/diff.patch`

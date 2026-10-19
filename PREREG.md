@@ -26,6 +26,7 @@ run**, and write the commit hash below. Everything else on this page is fixed no
 ## Rules that resolve values from Phase 0 / pilots (fixed)
 
 - **N\*** = the largest N in E0.4 with A1 mean recall ≥ 0.9. Phase 1 uses N ∈ {N\*, 2N\*}.
+- **Phase 0 (E0.4 / E0.5) step count** = A1's E0.6 proposal (same 98% rule as below), clamped to [2000, 4000].
 - **Phase 1 step budget** = the first E0.6 eval step at which A1's val recall reaches ≥ 98% of its maximum, rounded up to a
   multiple of 500.
 - **Learning rate** per arm = the candidate in {3e-4, 1e-3, 3e-3} with the highest **val** recall in E1.0a (a separate
