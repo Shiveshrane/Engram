@@ -1771,6 +1771,304 @@
           "after_hash": "1c8ff23e7e00"
         }
       ]
+    },
+    {
+      "id": "0010",
+      "time": "2026-10-19 17:06:08",
+      "summary": "Install fla-core (FLA's kernels) instead of the wrapper and surface FLA import errors",
+      "explanation": "NB00 on Kaggle showed fla.ops was not importable: flash-linear-attention 0.5.x is only a wrapper and the Triton kernels live in fla-core, which --no-deps skipped, so the FLA kernel was never tested. FLA_SPEC now defaults to fla-core==0.5.2; fla_available() records the import error in FLA_IMPORT_ERROR and bench_kernels prints and stores it; the NB00 version cell uses importlib.metadata instead of the missing fla.__version__.",
+      "files": [
+        {
+          "path": "engramdelta/models/gdn_block.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "126",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "130-131",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "134",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "136-137",
+              "old": "132"
+            }
+          ],
+          "added": 6,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "6f5b2ead4486"
+        },
+        {
+          "path": "engramdelta/scripts/bench_kernels.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "20",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "123-126",
+              "old": "122"
+            }
+          ],
+          "added": 5,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "13b0e9687cee"
+        },
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "42",
+              "old": "42"
+            },
+            {
+              "kind": "modified",
+              "new": "189",
+              "old": "189"
+            },
+            {
+              "kind": "modified",
+              "new": "214-215",
+              "old": "214"
+            },
+            {
+              "kind": "modified",
+              "new": "263",
+              "old": "262"
+            }
+          ],
+          "added": 5,
+          "removed": 4,
+          "before_existed": true,
+          "after_hash": "f5f870d94774"
+        },
+        {
+          "path": "notebooks/00_env_and_kernels.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "6",
+              "old": "6"
+            },
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            },
+            {
+              "kind": "modified",
+              "new": "44",
+              "old": "44"
+            },
+            {
+              "kind": "modified",
+              "new": "80",
+              "old": "80"
+            }
+          ],
+          "added": 4,
+          "removed": 4,
+          "before_existed": true,
+          "after_hash": "4ed898f8f070"
+        },
+        {
+          "path": "notebooks/01_phase0_tests.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "94968e7545fb"
+        },
+        {
+          "path": "notebooks/02_phase0_known_result.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "c8990376e626"
+        },
+        {
+          "path": "notebooks/03_lm_data_prep.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "6fa7d9e7e00f"
+        },
+        {
+          "path": "notebooks/10_phase1_pilot.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "b35a6466a6d5"
+        },
+        {
+          "path": "notebooks/11_phase1_H1_grid.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "34a676fc3933"
+        },
+        {
+          "path": "notebooks/12_phase1_arms.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "0d5a484635b9"
+        },
+        {
+          "path": "notebooks/13_phase1_H4.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "59962920f166"
+        },
+        {
+          "path": "notebooks/14_phase1_analysis.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "5fda775b96b3"
+        },
+        {
+          "path": "notebooks/20_phase2_train.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "cdd67ebe2fc9"
+        },
+        {
+          "path": "notebooks/21_phase2_eval.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "a21926b76464"
+        },
+        {
+          "path": "notebooks/22_phase2_analysis.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "b4272830b845"
+        },
+        {
+          "path": "requirements.txt",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "14",
+              "old": "14"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "160fa040f5cf"
+        }
+      ]
     }
   ]
 }

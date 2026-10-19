@@ -334,3 +334,47 @@ Diff: `.changelog/entries/0008/diff.patch`
 **What the change does:** The settings cell's REPO_URL default was a placeholder (YOUR_GITHUB_USER/engramdelta.git). It now defaults to the public repo https://github.com/Shiveshrane/Engram.git, so every notebook clones the code on Kaggle without edits or a GitHub token.
 
 Diff: `.changelog/entries/0009/diff.patch`
+
+---
+
+## [0010] Install fla-core (FLA's kernels) instead of the wrapper and surface FLA import errors
+*2026-10-19 17:06:08*
+
+- **File:** `engramdelta/models/gdn_block.py` (modified, +6/-1)
+  - **Lines:** 126 added; 130-131 added; 134 added; 136-137 modified (were 132 before)
+- **File:** `engramdelta/scripts/bench_kernels.py` (modified, +5/-1)
+  - **Lines:** 20 added; 123-126 modified (were 122 before)
+- **File:** `notebooks/build_notebooks.py` (modified, +5/-4)
+  - **Lines:** 42 modified (were 42 before); 189 modified (were 189 before); 214-215 modified (were 214 before); 263 modified (were 262 before)
+- **File:** `notebooks/00_env_and_kernels.ipynb` (modified, +4/-4)
+  - **Lines:** 6 modified (were 6 before); 13 modified (were 13 before); 44 modified (were 44 before); 80 modified (were 80 before)
+- **File:** `notebooks/01_phase0_tests.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/02_phase0_known_result.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/03_lm_data_prep.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/10_phase1_pilot.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/11_phase1_H1_grid.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/12_phase1_arms.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/13_phase1_H4.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/14_phase1_analysis.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/20_phase2_train.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/21_phase2_eval.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/22_phase2_analysis.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `requirements.txt` (modified, +1/-1)
+  - **Lines:** 14 modified (were 14 before)
+
+**Summary:** Install fla-core (FLA's kernels) instead of the wrapper and surface FLA import errors
+
+**What the change does:** NB00 on Kaggle showed fla.ops was not importable: flash-linear-attention 0.5.x is only a wrapper and the Triton kernels live in fla-core, which --no-deps skipped, so the FLA kernel was never tested. FLA_SPEC now defaults to fla-core==0.5.2; fla_available() records the import error in FLA_IMPORT_ERROR and bench_kernels prints and stores it; the NB00 version cell uses importlib.metadata instead of the missing fla.__version__.
+
+Diff: `.changelog/entries/0010/diff.patch`
