@@ -107,15 +107,23 @@ def n_star(df: pd.DataFrame, threshold: float = 0.9) -> Optional[int]:
     return int(ok["N"].max()) if len(ok) else None
 
 
-def step_budget_proposal(results_dir: str = "results", frac: float = 0.98, round_to: int = 500) -> Dict:
-    """E0.6 rule: first eval step where A1's val recall >= frac * its maximum, rounded up to a multiple of round_to."""
+def step_budget_proposal(results_dir: str = "results", N: Optional[int] = None, frac: float = 0.98,
+                         round_to: int = 500, min_learned: float = 0.5) -> Dict:
+    """E0.6 rule: first eval step where the arm's val recall >= frac * its maximum, rounded up to a multiple of round_to.
+
+    Only E0.6 runs with data.N == N are used (all runs if N is None). The rule is meaningless on a curve that never
+    leaves chance, so "learned" is False (and "proposal" None) when the maximum val recall is below min_learned.
+    """
     out = {}
     for r in read_results(os.path.join(results_dir, "phase0", "E0.6")):
+        if N is not None and r["data"]["N"] != N:
+            continue
         curve = [(s, ev["recall"]) for s, ev in r.get("eval_curve", [])] + [(r["train"]["steps"], r["metrics"]["val_recall"])]
         best = max(v for _, v in curve)
         first = min(s for s, v in curve if v >= frac * best)
-        out[r["arm"]] = {"max_val_recall": best, "first_step_at_98pct": first,
-                         "proposal": int(math.ceil(first / round_to) * round_to), "curve": curve,
+        learned = best >= min_learned
+        out[r["arm"]] = {"N": r["data"]["N"], "max_val_recall": best, "first_step_at_98pct": first, "learned": learned,
+                         "proposal": int(math.ceil(first / round_to) * round_to) if learned else None, "curve": curve,
                          "train_seconds": r["train_seconds"], "tok_per_s": r["throughput_tokens_per_s"]}
     return out
 

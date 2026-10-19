@@ -113,15 +113,19 @@ def arms(df, out):
 
 
 def step_curve(results_dir, out):
-    sb = analysis.step_budget_proposal(results_dir)
+    df = analysis.load(results_dir)
+    N = analysis.n_star(df) if not df.empty and "E0.4" in set(df["group"]) else None
+    sb = analysis.step_budget_proposal(results_dir, N=N)
     if not sb:
         return None
+    N = next(iter(sb.values()))["N"]
     fig, ax = plt.subplots(figsize=(6.5, 4), facecolor=SURFACE)
     for arm, v in sb.items():
         xs, ys = zip(*v["curve"])
         line(ax, list(xs), list(ys), [0] * len(xs), arm)
-        ax.axvline(v["proposal"], color=ARM_COLOR.get(arm, MUTED), linestyle=":", linewidth=1)
-    style(ax, "E0.6 val recall during training (N=64, F=512, P=64, a)", "step", "val recall")
+        if v["proposal"] is not None:
+            ax.axvline(v["proposal"], color=ARM_COLOR.get(arm, MUTED), linestyle=":", linewidth=1)
+    style(ax, f"E0.6 val recall during training (N={N}, F=512, P=64, a)", "step", "val recall")
     p = os.path.join(out, "E0.6_step_curve.png")
     fig.savefig(p, dpi=150, bbox_inches="tight")
     plt.close(fig)

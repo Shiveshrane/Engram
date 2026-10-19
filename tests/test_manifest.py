@@ -27,3 +27,16 @@ def test_run_ids_unique_and_cells_correct(tmp_path):
     assert all("data.filler_weight=0.0" in r["set"] for r in e10c)
     a3 = [r for r in build("E1.2", PREREG, str(tmp_path)) if "/A3.yaml" in r["config"]]
     assert all("train.lr=0.001" in r["set"] for r in a3), "A3 must use A2's learning rate"
+
+
+def test_phase0_steps_and_e06_cell(tmp_path):
+    for g in ("E0.4", "E0.5"):
+        assert all("train.steps=4000" in r["set"] for r in build(g, PREREG, str(tmp_path)))
+    e06 = build("E0.6", dict(PREREG, N_star=32), str(tmp_path))
+    assert {s for r in e06 for s in r["set"] if s.startswith(("data.N=", "data.F="))} == {"data.N=32", "data.F=512"}
+
+
+def test_e06_needs_n_star(tmp_path):
+    import pytest
+    with pytest.raises(SystemExit):
+        build("E0.6", dict(PREREG, N_star=None), str(tmp_path))

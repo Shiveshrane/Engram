@@ -492,3 +492,39 @@ Diff: `.changelog/entries/0016/diff.patch`
 **What the change does:** Added ENGRAMDELTA_DESIGN.md to .gitignore and removed it from the git index with git rm --cached (the local file is untouched). It had been committed in 61388d4, so the ignore rule alone would not have stopped tracking it. The README link to it became plain text, since the file is no longer on GitHub. The file still exists in the history of earlier commits.
 
 Diff: `.changelog/entries/0017/diff.patch`
+
+---
+
+## [0018] E0.6 runs at N = N*; E0.4/E0.5 fixed at 4000 steps; step rule requires A1 to learn
+*2026-10-20 01:53:38*
+
+- **File:** `engramdelta/scripts/make_manifest.py` (modified, +21/-5)
+  - **Lines:** 16-17 added; 29 added; 92-103 added; 114-115 modified (were 99-100 before); 117-119 modified (were 102-103 before); 121 modified (were 105 before)
+- **File:** `engramdelta/analysis.py` (modified, +12/-4)
+  - **Lines:** 110-116 modified (were 110-111 before); 119-120 added; 124-126 modified (were 117-118 before)
+- **File:** `engramdelta/scripts/make_plots.py` (modified, +7/-3)
+  - **Lines:** 116-118 modified (were 116 before); 121 added; 126-128 modified (were 123-124 before)
+- **File:** `tests/test_manifest.py` (modified, +13/-0)
+  - **Lines:** 30-42 added
+
+**Summary:** E0.6 runs at N = N*; E0.4/E0.5 fixed at 4000 steps; step rule requires A1 to learn
+
+**What the change does:** E0.6 was hard-coded at N=64, which E0.4 showed is 2N* (A1 2% recall even without clutter), so its step-budget proposal was noise. make_manifest now builds E0.6 at N = prereg N_star, or N* computed from finished E0.4 results via e06_n() (exits if neither exists). E0.4/E0.5 runs carry train.steps=4000 (PHASE0_STEPS) themselves; run IDs are unchanged, so the 40 finished runs are still recognised. analysis.step_budget_proposal() takes N to select E0.6 runs and returns learned=False / proposal=None when max val recall < 0.5. make_plots' E0.6 plot uses N* and its title shows N. New tests check the 4000 steps, the E0.6 cell and the missing-N* exit.
+
+Diff: `.changelog/entries/0018/diff.patch`
+
+---
+
+## [0019] NB02: E0.4/E0.5 first, then E0.6 at N*, with hard stops; resume restore skips finished checkpoints
+*2026-10-20 01:53:38*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +73/-58)
+  - **Lines:** 43 modified (were 43 before); 207-225 modified (were 207-211 before); 438-439 modified (were 424-425 before); 441-444 modified (were 427-429 before); 446-449 modified (were 431-434 before); 451-452 modified (were 436 before); 454-455 modified (were 438-439 before); 460 modified (were 444 before); 462-465 modified (were 446-466 before); 474-478 modified (were 475-476 before); 480-484 modified (were 478-479 before); 486-488 modified (were 481 before); 490-491 modified (were 483-484 before); 493-496 modified (were 486-487 before); 501-506 modified (were 492 before); 508 modified (were 494 before); 511 modified (were 497 before); 513 added; 520-521 modified (were 505-506 before); 524-525 modified (were 509-510 before); 528 modified (were 513 before)
+- **File:** `PREREG.md` (modified, +15/-2)
+  - **Lines:** 29-30 modified (were 29 before); 32-33 modified (were 31 before); 39-49 added
+
+**Summary:** NB02: E0.4/E0.5 first, then E0.6 at N*, with hard stops; resume restore skips finished checkpoints
+
+**What the change does:** NB02 now runs E0.4+E0.5 (4000 steps), computes test 7 and N*, stops with an error if test 7 fails, reports missing E0.5 runs, runs E0.6 at N*, and stops if A1 never exceeds 50% val recall instead of proposing a step budget. phase1_steps is A1's proposal (the written rule; it previously took the max over A1 and A2), and prereg.proposed.yaml is also copied into results/. SETUP prints the attached inputs, accepts globs in PREV_OUTPUTS, finds results/ and ckpt/ folders up to 4 levels deep (old outputs had engramdelta/results), and restores checkpoints only for runs without a result, so ~600 MB of finished-run checkpoints are not copied into the new output. PREREG.md: the rule text is updated and a 'Changes to these rules before the pre-registration commit' section records why and when.
+
+Diff: `.changelog/entries/0019/diff.patch`

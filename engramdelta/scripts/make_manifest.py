@@ -13,6 +13,8 @@ Pre-registered resolution rules (also in PREREG.md):
                   A3, A4 use A2's LR; A5, A6, A1_noGconv use A1's; A2_* use A2's.
   Phase 2 tokens  tokens = min(phase2_max_tokens, 0.9 * min(throughput of A1, A2 in E2.0) * hours_per_run * 3600),
                   rounded down to a whole number of 65,536-token steps.
+  E0.6 N          N = N_star from prereg.yaml if set, otherwise N_star computed from the finished E0.4 results
+                  (largest N with A1 mean recall >= 0.9). E0.6 therefore runs after E0.4.
 """
 import argparse
 import os
@@ -24,6 +26,7 @@ import yaml
 from ..utils.run_log import read_results
 
 PHASE0_N = [16, 32, 64, 128, 256]
+PHASE0_STEPS = 4000      # E0.4 / E0.5 training steps (pre-registered; the value of the first NB02 run)
 LR_INHERIT = {"A3": "A2", "A4": "A2", "A5": "A1", "A6": "A1", "A1_noGconv": "A1",
               "A2_noEconv": "A2", "A2_noGconv": "A2", "A2_noboth": "A2"}
 
@@ -86,6 +89,18 @@ def phase2_steps(pr: dict, results_dir: str, tokens_per_step: int = 64 * 1024) -
     return max(1, int(tok) // tokens_per_step)
 
 
+def e06_n(pr: dict, results_dir: str) -> int:
+    """N for E0.6: prereg N_star if set, else N* from the finished E0.4 results."""
+    if pr.get("N_star") not in (None, "", "null"):
+        return int(pr["N_star"])
+    from ..analysis import load, n_star
+    df = load(results_dir)
+    n = n_star(df) if not df.empty and "E0.4" in set(df["group"]) else None
+    if n is None:
+        sys.exit("E0.6 needs N*: run E0.4 first (no A1 cell reached 0.9 mean recall, or no E0.4 results found)")
+    return int(n)
+
+
 def build(group: str, pr: dict, results_dir: str) -> List[dict]:
     runs: List[dict] = []
     seeds = pr.get("seeds", [0, 1, 2])
@@ -96,13 +111,14 @@ def build(group: str, pr: dict, results_dir: str) -> List[dict]:
     elif group == "E0.4":      # known result: GDN vs vanilla linear attention, plain MQAR
         for N in PHASE0_N:
             for arm in ("LA", "A1"):
-                runs += [mqar_run(group, "phase0", arm, s, N) for s in seeds]
-            runs.append(mqar_run(group, "phase0", "T1", 0, N))
+                runs += [mqar_run(group, "phase0", arm, s, N, steps=PHASE0_STEPS) for s in seeds]
+            runs.append(mqar_run(group, "phase0", "T1", 0, N, steps=PHASE0_STEPS))
     elif group == "E0.5":      # leak test: Engram-only probe must be at chance
-        runs += [mqar_run(group, "phase0", "A6", 0, N) for N in PHASE0_N]
-    elif group == "E0.6":      # step-budget curve and real per-run time
+        runs += [mqar_run(group, "phase0", "A6", 0, N, steps=PHASE0_STEPS) for N in PHASE0_N]
+    elif group == "E0.6":      # step-budget curve and real per-run time, at the Phase 1 primary cell (N = N*)
+        N = e06_n(pr, results_dir)
         for arm in ("A1", "A2"):
-            runs.append(mqar_run(group, "phase1", arm, 0, 64, 512, 64, "a",
+            runs.append(mqar_run(group, "phase1", arm, 0, N, 512, 64, "a",
                                  extra=["phase=phase0", "train.steps=6000", "train.eval_every=250"]))
     elif group.startswith("E1"):
         Ns = need(pr, "N_star")

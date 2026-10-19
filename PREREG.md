@@ -26,14 +26,27 @@ run**, and write the commit hash below. Everything else on this page is fixed no
 ## Rules that resolve values from Phase 0 / pilots (fixed)
 
 - **N\*** = the largest N in E0.4 with A1 mean recall ≥ 0.9. Phase 1 uses N ∈ {N\*, 2N\*}.
-- **Phase 0 (E0.4 / E0.5) step count** = A1's E0.6 proposal (same 98% rule as below), clamped to [2000, 4000].
+- **Phase 0 (E0.4 / E0.5) step count** = 4,000 steps (fixed).
+- **E0.6** runs at the Phase 1 primary cell: N = N\* (from E0.4), F = 512, P = 64, placement a, 6,000 steps, A1 and A2.
 - **Phase 1 step budget** = the first E0.6 eval step at which A1's val recall reaches ≥ 98% of its maximum, rounded up to a
-  multiple of 500.
+  multiple of 500. The rule applies only if A1's maximum val recall is ≥ 0.5; otherwise there is no step budget and the
+  human decides what to change before Phase 1.
 - **Learning rate** per arm = the candidate in {3e-4, 1e-3, 3e-3} with the highest **val** recall in E1.0a (a separate
   val set, not the eval set). Ties go to the smaller LR. A3 and A4 use A2's LR; A5, A6 and A1_noGconv use A1's;
   A2_* use A2's.
 - **Phase 2 tokens** = min(150M, 0.9 × min(A1, A2 throughput in E2.0) × 1.7 h), rounded down to whole 65,536-token steps.
   The same token count is used for every arm.
+
+## Changes to these rules before the pre-registration commit
+
+- 2026-10-20, after the first NB02 run (code commit 5ceb0ab): E0.6 had been fixed at N = 64 and run *before* E0.4, and its
+  step count also set the E0.4 / E0.5 steps. E0.4 then gave N\* = 32, so N = 64 is 2N\*, where A1 stays near 1/N even
+  without clutter (2.0% recall). E0.6 at N = 64 never left chance (max val recall 0.001), and the step rule produced
+  noise (5,500), which E0.4 / E0.5 then used, clamped to 4,000. Changes: E0.4 / E0.5 are fixed at the 4,000 steps they
+  already used (no E0.4 / E0.5 result changes); E0.6 moves after E0.4 and runs at N = N\*, the cell the step budget is
+  for; the step rule now requires A1 to reach 0.5 val recall. The N = 64 E0.6 runs are kept as results and reported, but
+  not used for the step budget. The Phase 1 step budget now also uses A1's proposal only, as written above (NB02 had
+  used the maximum over A1 and A2).
 
 ## Grid (one-week version, 167 Phase 1 runs; see `engramdelta/scripts/make_manifest.py`)
 

@@ -2455,6 +2455,267 @@
           "after_hash": "8f17e53a8a78"
         }
       ]
+    },
+    {
+      "id": "0018",
+      "time": "2026-10-20 01:53:38",
+      "summary": "E0.6 runs at N = N*; E0.4/E0.5 fixed at 4000 steps; step rule requires A1 to learn",
+      "explanation": "E0.6 was hard-coded at N=64, which E0.4 showed is 2N* (A1 2% recall even without clutter), so its step-budget proposal was noise. make_manifest now builds E0.6 at N = prereg N_star, or N* computed from finished E0.4 results via e06_n() (exits if neither exists). E0.4/E0.5 runs carry train.steps=4000 (PHASE0_STEPS) themselves; run IDs are unchanged, so the 40 finished runs are still recognised. analysis.step_budget_proposal() takes N to select E0.6 runs and returns learned=False / proposal=None when max val recall < 0.5. make_plots' E0.6 plot uses N* and its title shows N. New tests check the 4000 steps, the E0.6 cell and the missing-N* exit.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/make_manifest.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "16-17",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "29",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "92-103",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "114-115",
+              "old": "99-100"
+            },
+            {
+              "kind": "modified",
+              "new": "117-119",
+              "old": "102-103"
+            },
+            {
+              "kind": "modified",
+              "new": "121",
+              "old": "105"
+            }
+          ],
+          "added": 21,
+          "removed": 5,
+          "before_existed": true,
+          "after_hash": "49ca1988a0ce"
+        },
+        {
+          "path": "engramdelta/analysis.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "110-116",
+              "old": "110-111"
+            },
+            {
+              "kind": "added",
+              "new": "119-120",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "124-126",
+              "old": "117-118"
+            }
+          ],
+          "added": 12,
+          "removed": 4,
+          "before_existed": true,
+          "after_hash": "dbad4de5ac40"
+        },
+        {
+          "path": "engramdelta/scripts/make_plots.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "116-118",
+              "old": "116"
+            },
+            {
+              "kind": "added",
+              "new": "121",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "126-128",
+              "old": "123-124"
+            }
+          ],
+          "added": 7,
+          "removed": 3,
+          "before_existed": true,
+          "after_hash": "9f14a6c296aa"
+        },
+        {
+          "path": "tests/test_manifest.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "30-42",
+              "old": null
+            }
+          ],
+          "added": 13,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "c894358e1995"
+        }
+      ]
+    },
+    {
+      "id": "0019",
+      "time": "2026-10-20 01:53:38",
+      "summary": "NB02: E0.4/E0.5 first, then E0.6 at N*, with hard stops; resume restore skips finished checkpoints",
+      "explanation": "NB02 now runs E0.4+E0.5 (4000 steps), computes test 7 and N*, stops with an error if test 7 fails, reports missing E0.5 runs, runs E0.6 at N*, and stops if A1 never exceeds 50% val recall instead of proposing a step budget. phase1_steps is A1's proposal (the written rule; it previously took the max over A1 and A2), and prereg.proposed.yaml is also copied into results/. SETUP prints the attached inputs, accepts globs in PREV_OUTPUTS, finds results/ and ckpt/ folders up to 4 levels deep (old outputs had engramdelta/results), and restores checkpoints only for runs without a result, so ~600 MB of finished-run checkpoints are not copied into the new output. PREREG.md: the rule text is updated and a 'Changes to these rules before the pre-registration commit' section records why and when.",
+      "files": [
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "43",
+              "old": "43"
+            },
+            {
+              "kind": "modified",
+              "new": "207-225",
+              "old": "207-211"
+            },
+            {
+              "kind": "modified",
+              "new": "438-439",
+              "old": "424-425"
+            },
+            {
+              "kind": "modified",
+              "new": "441-444",
+              "old": "427-429"
+            },
+            {
+              "kind": "modified",
+              "new": "446-449",
+              "old": "431-434"
+            },
+            {
+              "kind": "modified",
+              "new": "451-452",
+              "old": "436"
+            },
+            {
+              "kind": "modified",
+              "new": "454-455",
+              "old": "438-439"
+            },
+            {
+              "kind": "modified",
+              "new": "460",
+              "old": "444"
+            },
+            {
+              "kind": "modified",
+              "new": "462-465",
+              "old": "446-466"
+            },
+            {
+              "kind": "modified",
+              "new": "474-478",
+              "old": "475-476"
+            },
+            {
+              "kind": "modified",
+              "new": "480-484",
+              "old": "478-479"
+            },
+            {
+              "kind": "modified",
+              "new": "486-488",
+              "old": "481"
+            },
+            {
+              "kind": "modified",
+              "new": "490-491",
+              "old": "483-484"
+            },
+            {
+              "kind": "modified",
+              "new": "493-496",
+              "old": "486-487"
+            },
+            {
+              "kind": "modified",
+              "new": "501-506",
+              "old": "492"
+            },
+            {
+              "kind": "modified",
+              "new": "508",
+              "old": "494"
+            },
+            {
+              "kind": "modified",
+              "new": "511",
+              "old": "497"
+            },
+            {
+              "kind": "added",
+              "new": "513",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "520-521",
+              "old": "505-506"
+            },
+            {
+              "kind": "modified",
+              "new": "524-525",
+              "old": "509-510"
+            },
+            {
+              "kind": "modified",
+              "new": "528",
+              "old": "513"
+            }
+          ],
+          "added": 73,
+          "removed": 58,
+          "before_existed": true,
+          "after_hash": "8c71053ae40d"
+        },
+        {
+          "path": "PREREG.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "29-30",
+              "old": "29"
+            },
+            {
+              "kind": "modified",
+              "new": "32-33",
+              "old": "31"
+            },
+            {
+              "kind": "added",
+              "new": "39-49",
+              "old": null
+            }
+          ],
+          "added": 15,
+          "removed": 2,
+          "before_existed": true,
+          "after_hash": "bf87997e1fde"
+        }
+      ]
     }
   ]
 }

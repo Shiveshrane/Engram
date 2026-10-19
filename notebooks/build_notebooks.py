@@ -40,7 +40,7 @@ CODE_DATASET = "/kaggle/input/engramdelta-src"   # Kaggle Dataset with the repo 
 HF_REPO      = None             # e.g. "your-hf-user/engramdelta-runs" (private dataset repo; needs Kaggle Secret HF_TOKEN)
 GDN_BACKEND  = "torch"          # "torch" (pure PyTorch, always works) or "fla" (only if NB00 says PASS)
 FLA_SPEC     = "fla-core==0.5.2"                 # FLA's kernel package (fla.ops); installed with --no-deps
-PREV_OUTPUTS = []               # outputs of earlier sessions attached as inputs, e.g. ["/kaggle/input/engramdelta-11-phase1-h1-grid"]
+PREV_OUTPUTS = []               # outputs of earlier sessions attached as inputs; globs work, e.g. ["/kaggle/input/*"]
 NCCL_ENV     = {}               # set to {"NCCL_P2P_DISABLE": "1", "NCCL_IB_DISABLE": "1"} if NB00's first NCCL test hung
 '''
 
@@ -204,11 +204,25 @@ def restore(src, dst):
             if not os.path.exists(d):
                 os.makedirs(os.path.dirname(d), exist_ok=True); shutil.copy2(s, d); n += 1
     return n
-for prev in PREV_OUTPUTS:
-    n1 = restore(os.path.join(prev, "results"), str(REPO / "results"))
-    n1 += restore(os.path.join(prev, "engramdelta", "results"), str(REPO / "results"))   # outputs made before this layout
-    n2 = restore(os.path.join(prev, "ckpt"), str(WORK / "ckpt"))
-    print(f"restored from {prev}: {n1} result files, {n2} checkpoint files")
+if ON_KAGGLE and os.path.isdir("/kaggle/input"):
+    print("attached inputs:", sorted(glob.glob("/kaggle/input/*")) or "none")
+def find_dirs(prev, name):
+    """Folders called `name` up to 4 levels inside an attached output (e.g. <prev>/results, <prev>/engramdelta/results)."""
+    c = [p for k in range(5) for p in glob.glob(os.path.join(prev, *(["*"] * k), name))]
+    return [d for d in dict.fromkeys(c) if os.path.isdir(d) and "/_logs/" not in d]
+_prevs = [p for e in PREV_OUTPUTS for p in (sorted(glob.glob(e)) or [e])]     # entries may be globs, e.g. "/kaggle/input/*"
+for prev in _prevs:
+    if not os.path.isdir(prev):
+        print(f"!! PREV_OUTPUTS entry not found: {prev}  (check the 'attached inputs' list above)"); continue
+    dirs = find_dirs(prev, "results")
+    n1 = sum(restore(d, str(REPO / "results")) for d in dirs)
+    # checkpoints: only for runs that have no result yet (a finished run never resumes, so its checkpoint is skipped)
+    done_ids = {os.path.splitext(f)[0] for _, _, fs in os.walk(REPO / "results") for f in fs if f.endswith(".json")}
+    n2 = 0
+    for ck in [c for d in find_dirs(prev, "ckpt") for c in glob.glob(os.path.join(d, "*"))]:
+        if os.path.basename(ck) not in done_ids:
+            n2 += restore(ck, str(WORK / "ckpt" / os.path.basename(ck)))
+    print(f"restored from {prev}: {n1} result files (from {dirs}), {n2} checkpoint files of unfinished runs")
 if os.environ.get("HF_REPO"):
     run("python -m engramdelta.scripts.sync pull results", check=False)
 
@@ -421,49 +435,34 @@ NB["01_phase0_tests"] = notebook([
 ])
 
 NB["02_phase0_known_result"] = notebook([
-    md('''
-    # 02 · Phase 0 known result, leak test, step budget  (~2–3 GPU-h)
+    md("""
+    # 02 · Phase 0 known result, leak test, step budget  (~3 GPU-h fresh; ~0.5 GPU-h when resuming)
 
-    **Stage 1: E0.6.** A1 and A2 at (N=64, F=512, P=64, a), 6,000 steps, with val recall every 250 steps
-    (~30 min). MQAR has a long plateau (recall stuck at 1/N) before the model suddenly learns the key→value
-    binding. This curve shows when that happens, and gives the real per-run time.
+    **Stage 1 · E0.4 (test 7) and E0.5 (leak test)**, 4,000 steps each (pre-registered):
+    * **E0.4:** vanilla linear attention (LA) vs GDN (A1) on plain MQAR, N ∈ {16, 32, 64, 128, 256}, 3 seeds; T1 at 1 seed.
+      Gives the test-7 verdict and **N\\*** = the largest N with A1 mean recall ≥ 0.9.
+    * **E0.5:** the Engram-only probe A6 at every N; it must be at chance (recall < 1%).
 
-    **Stage 2, with the step count from stage 1** (pre-registered rule: A1's first step ≥ 98% of its max val
-    recall, clamped to [2000, 4000]; or set `E04_STEPS` yourself):
-    * **E0.4 (test 7):** vanilla linear attention (LA) vs GDN (A1) on plain MQAR, N ∈ {16, 32, 64, 128, 256}, 3 seeds; T1 at 1 seed.
-    * **E0.5 (test 6 at scale):** the Engram-only probe A6 at every N; it must be at chance.
+    **Stage 2 · E0.6 at N = N\\*** (the Phase 1 primary cell: N\\*, F=512, P=64, a): A1 and A2, 6,000 steps, val recall
+    every 250 steps (~25 min). MQAR has a long plateau (recall stuck at 1/N) before the key→value binding is learned;
+    this curve gives the Phase 1 step budget and the real per-run time. **If A1 never gets above 50% val recall, the
+    notebook stops**: the step rule would be meaningless (you decide what to change).
 
-    The budget line before stage 2 prints the E0.4 GPU-hours at that step count.
+    **Resuming / re-running:** attach the earlier output of this notebook (Add Input → Your Work) and put its path in
+    `PREV_OUTPUTS`. Finished runs are skipped, so only missing runs train.
 
-    **Outputs:** test-7 table and verdict, N\\* proposal, step-budget proposal, and the Phase 1 GPU-hour estimate from
-    measured throughput.
+    **Outputs:** test-7 table and verdict, N\\*, leak table, step-budget proposal, `configs/prereg.proposed.yaml`, and the
+    Phase 1 GPU-hour estimate from measured throughput.
 
     **Stop if test 7 fails** (design §6: the pipeline is wrong). **Then you:** fill `configs/prereg.yaml` (N_star,
     phase1_steps) and the PREREG.md "Phase 0 outcomes" table, commit, push, and pin that commit as `REPO_REF` in
     every Phase 1 notebook.
-    '''),
+    """),
     *setup_cells(gpu=True),
-    md("## Stage 1 · E0.6: training curve and real per-run time"),
-    *sweep_cells(["E0.6"], 1.0),
-    code('''
-    from engramdelta import analysis
-    E04_STEPS = "auto"      # "auto" = pre-registered rule below, or an int (e.g. 3000) to override
-    sb = analysis.step_budget_proposal("results")
-    for arm, v in sb.items():
-        print(f"{arm}: max val recall {v['max_val_recall']:.3f}, first step >= 98% of max: {v['first_step_at_98pct']} "
-              f"-> proposal {v['proposal']} | {v['tok_per_s']:.0f} tok/s, {v['train_seconds'] / 60:.1f} min for 6000 steps")
-        print("   curve (step, val recall):", [(s, round(r, 3)) for s, r in v["curve"]])
-    if E04_STEPS == "auto":
-        E04_STEPS = int(min(4000, max(2000, sb["A1"]["proposal"])))
-    if sb["A1"]["max_val_recall"] < 0.5:
-        print("!! A1 stayed below 50% val recall for all 6000 steps at N=64, F=512. Look at the curve; E0.4 at small N may still"
-              " be fine, but consider a larger E04_STEPS before spending the E0.4 budget.")
-    print("\\n>> E0.4 / E0.5 will train for", E04_STEPS, "steps")
-    '''),
-    md("## Stage 2 · E0.4 (test 7) and E0.5 (leak test)"),
-    *sweep_cells(["E0.4", "E0.5"], 2.5, extra_expr='f"--extra-set train.steps={E04_STEPS}"'),
-    md("## Test 7: known result (GDN vs vanilla linear attention)"),
-    code('''
+    md("## Stage 1 · E0.4 (test 7) and E0.5 (leak test)"),
+    *sweep_cells(["E0.4", "E0.5"], 2.5),
+    md("## Test 7: known result (GDN vs vanilla linear attention) and N*"),
+    code("""
     from engramdelta import analysis
     df = analysis.load("results")
     chk = analysis.known_result_check(df)
@@ -472,45 +471,61 @@ NB["02_phase0_known_result"] = notebook([
     print("\\ncriterion 1 (A1 > LA + 2 sigma at >= 2 N):", chk["criterion_1_pass"], f"({chk['n_wins']} N)")
     print("criterion 2 (A1 non-increasing beyond the knee):", chk["criterion_2_pass"])
     print("TEST 7:", "PASS" if chk["pass"] else "FAIL -> STOP, the pipeline is wrong (design §6)")
-    print("\\nN* proposal (largest N with A1 mean recall >= 0.9):", chk["N_star"])
-    '''),
+    N_STAR = chk["N_star"]
+    print("\\nN* (largest N with A1 mean recall >= 0.9):", N_STAR)
+    if not chk["pass"] or N_STAR is None:
+        raise RuntimeError("STOP: test 7 failed or no N reached 0.9. Do not run E0.6 or Phase 1; report this table.")
+    """),
     md("## Test 6 at scale: A6 leak check"),
-    code('''
-    print(analysis.leak_table(df).to_string(index=False))
+    code("""
+    print(analysis.leak_table(df).sort_values("N").to_string(index=False))
+    missing = sorted(set([16, 32, 64, 128, 256]) - set(df[(df["group"] == "E0.5")]["N"]))
+    if missing:
+        print("!! E0.5 runs missing for N =", missing, "(rerun this notebook with PREV_OUTPUTS to finish them)")
     run("python -m pytest tests/test_repro_known.py -q -s -rs", check=False)
-    '''),
+    """),
+    md("## Stage 2 · E0.6 at N = N*: training curve and real per-run time"),
+    *sweep_cells(["E0.6"], 1.0),
     md("## Step budget (E0.6) and measured run time"),
-    code('''
-    sb = analysis.step_budget_proposal("results")
+    code("""
+    sb = analysis.step_budget_proposal("results", N=N_STAR)
     for arm, v in sb.items():
-        print(f"{arm}: max val recall {v['max_val_recall']:.3f}, first step >= 98% of max: {v['first_step_at_98pct']}, "
-              f"proposal {v['proposal']} steps | {v['tok_per_s']:.0f} tok/s, {v['train_seconds']/60:.1f} min for 6000 steps")
+        print(f"{arm} (N={v['N']}): max val recall {v['max_val_recall']:.3f}, first step >= 98% of max: "
+              f"{v['first_step_at_98pct']}, proposal {v['proposal']} | {v['tok_per_s']:.0f} tok/s, "
+              f"{v['train_seconds'] / 60:.1f} min for 6000 steps")
+        print("   curve (step, val recall):", [(s, round(r, 3)) for s, r in v["curve"]])
     run("python -m engramdelta.scripts.make_plots --results-dir results --out figures", check=False)
     from IPython.display import Image, display
     for f in sorted(glob.glob("figures/E0.*.png")):
         display(Image(f))
-    '''),
+    if "A1" not in sb:
+        raise RuntimeError(f"STOP: no E0.6 A1 result at N={N_STAR} (did the E0.6 sweep run out of time? rerun to resume)")
+    if not sb["A1"]["learned"]:
+        raise RuntimeError(f"STOP: A1 never exceeded 50% val recall at the primary cell (N={N_STAR}, F=512) in 6000 steps. "
+                         "The step-budget rule is meaningless here; bring this curve back for a decision.")
+    """),
     md("## Proposed pre-registered values and the Phase 1 budget (from measured throughput)"),
-    code('''
+    code("""
     import yaml
     pr = yaml.safe_load(open("configs/prereg.yaml"))
-    prop = dict(pr, N_star=chk["N_star"], phase1_steps=max(v["proposal"] for v in sb.values()) if sb else None)
+    prop = dict(pr, N_star=N_STAR, phase1_steps=sb["A1"]["proposal"])     # rule: A1's E0.6 proposal (PREREG.md)
     yaml.safe_dump(prop, open("configs/prereg.proposed.yaml", "w"), sort_keys=False)
+    shutil.copy2("configs/prereg.proposed.yaml", "results/prereg.proposed.yaml")   # also in the output / zip
     print(open("configs/prereg.proposed.yaml").read())
     # Budget: LRs are not known yet, so use placeholder LRs (they do not change the run time)
     tmp = dict(prop, lr={"A1": 1e-3, "A2": 1e-3, "T1": 1e-3})
     yaml.safe_dump(tmp, open("/tmp/prereg_budget.yaml", "w"))
     run("python -m engramdelta.scripts.make_manifest --group all-phase1 --prereg /tmp/prereg_budget.yaml --out /tmp/manifests_p1")
     run(f"python -m engramdelta.scripts.budget '/tmp/manifests_p1/*.yaml' --nproc {NPROC} --quota-hours 13", check=False)
-    '''),
-    md('''
+    """),
+    md("""
     ## Your turn (no GPU needed)
     1. Check the test-7 verdict. If it FAILs, stop here.
-    2. Copy `N_star` and `phase1_steps` from `configs/prereg.proposed.yaml` into `configs/prereg.yaml`. If the budget above
-       says OVER BUDGET, decide on cuts (plan §6.5) **before** committing.
+    2. Copy `N_star` and `phase1_steps` from `configs/prereg.proposed.yaml` (also `results/prereg.proposed.yaml` in the
+       zip) into `configs/prereg.yaml`. If the budget above says OVER BUDGET, decide on cuts (plan §6.5) **before** committing.
     3. Fill the "Phase 0 outcomes" table in PREREG.md, commit, push, and put the commit hash in PREREG.md and as `REPO_REF`
        in notebooks 10–14.
-    '''),
+    """),
     code(FINISH),
 ])
 
