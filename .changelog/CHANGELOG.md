@@ -296,3 +296,41 @@ Diff: `.changelog/entries/0007/diff.patch`
 **What the change does:** README explains layout, local use, the Kaggle notebook order and synchronized DDP. DEVIATIONS lists every departure from the DeepSeek/FLA references and the design doc; PREREG fixes the decision rules and resolution rules before results exist; CHANGELOG tracks eval/data changes (design rule 3). notebooks/build_notebooks.py generates notebooks 00-22 with a shared setup cell (clone/copy code, --no-deps installs, secrets, HF or output-chaining restore) and manifest-driven resumable sweeps.
 
 Diff: `.changelog/entries/0008/diff.patch`
+
+---
+
+## [0009] Point notebooks at the GitHub repo Shiveshrane/Engram
+*2026-10-19 16:18:01*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +1/-1)
+  - **Lines:** 37 modified (were 37 before)
+- **File:** `notebooks/00_env_and_kernels.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/01_phase0_tests.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/02_phase0_known_result.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/03_lm_data_prep.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/10_phase1_pilot.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/11_phase1_H1_grid.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/12_phase1_arms.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/13_phase1_H4.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/14_phase1_analysis.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/20_phase2_train.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/21_phase2_eval.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+- **File:** `notebooks/22_phase2_analysis.ipynb` (modified, +1/-1)
+  - **Lines:** 13 modified (were 13 before)
+
+**Summary:** Point notebooks at the GitHub repo Shiveshrane/Engram
+
+**What the change does:** The settings cell's REPO_URL default was a placeholder (YOUR_GITHUB_USER/engramdelta.git). It now defaults to the public repo https://github.com/Shiveshrane/Engram.git, so every notebook clones the code on Kaggle without edits or a GitHub token.
+
+Diff: `.changelog/entries/0009/diff.patch`

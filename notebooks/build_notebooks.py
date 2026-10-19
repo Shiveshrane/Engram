@@ -34,7 +34,7 @@ def notebook(cells, gpu=True):
 
 SETTINGS = '''
 # ===================== SETTINGS: edit this cell, then "Run All" (or "Save Version -> Save & Run All") =====================
-REPO_URL     = "https://github.com/YOUR_GITHUB_USER/engramdelta.git"   # None -> copy the code from CODE_DATASET instead
+REPO_URL     = "https://github.com/Shiveshrane/Engram.git"   # None -> copy the code from CODE_DATASET instead
 REPO_REF     = "main"           # pin the PREREG commit hash for Phase 1 / 2 runs
 CODE_DATASET = "/kaggle/input/engramdelta-src"   # Kaggle Dataset with the repo (used when REPO_URL is None)
 HF_REPO      = None             # e.g. "your-hf-user/engramdelta-runs" (private dataset repo; needs Kaggle Secret HF_TOKEN)

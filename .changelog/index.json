@@ -1568,6 +1568,209 @@
           "after_hash": "033b38d045ef"
         }
       ]
+    },
+    {
+      "id": "0009",
+      "time": "2026-10-19 16:18:01",
+      "summary": "Point notebooks at the GitHub repo Shiveshrane/Engram",
+      "explanation": "The settings cell's REPO_URL default was a placeholder (YOUR_GITHUB_USER/engramdelta.git). It now defaults to the public repo https://github.com/Shiveshrane/Engram.git, so every notebook clones the code on Kaggle without edits or a GitHub token.",
+      "files": [
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "37",
+              "old": "37"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "c9de83e4ce25"
+        },
+        {
+          "path": "notebooks/00_env_and_kernels.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "e2b0fc45367c"
+        },
+        {
+          "path": "notebooks/01_phase0_tests.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "d69410dcd700"
+        },
+        {
+          "path": "notebooks/02_phase0_known_result.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "a9542095be01"
+        },
+        {
+          "path": "notebooks/03_lm_data_prep.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "59c4ac5a668f"
+        },
+        {
+          "path": "notebooks/10_phase1_pilot.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "756ce8fdd8cc"
+        },
+        {
+          "path": "notebooks/11_phase1_H1_grid.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "5c45350e9384"
+        },
+        {
+          "path": "notebooks/12_phase1_arms.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "86d3d4ad8deb"
+        },
+        {
+          "path": "notebooks/13_phase1_H4.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "41b21c8855cd"
+        },
+        {
+          "path": "notebooks/14_phase1_analysis.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "2d57da45d758"
+        },
+        {
+          "path": "notebooks/20_phase2_train.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "244caed236c8"
+        },
+        {
+          "path": "notebooks/21_phase2_eval.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "ede8222f7aed"
+        },
+        {
+          "path": "notebooks/22_phase2_analysis.ipynb",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "13",
+              "old": "13"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "1c8ff23e7e00"
+        }
+      ]
     }
   ]
 }
