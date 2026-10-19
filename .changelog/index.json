@@ -2258,6 +2258,77 @@
           "after_hash": "6fc5877dde29"
         }
       ]
+    },
+    {
+      "id": "0014",
+      "time": "2026-10-20 01:37:42",
+      "summary": "Delete a finished run's resume checkpoint after its result file is written",
+      "explanation": "train() kept ckpt/<run_id>/last.pt after a run finished, although sweep skips any run whose result JSON exists, so the file is never used again. It cost about 15 MB per Phase 1 run (most of NB02's 633 MB output). After the result is written (rank 0, write_result_file=True) last.pt and its then-empty folder are removed. Preempted runs keep their checkpoint; final.pt (save_final) is untouched; a copy already pushed to the HF Hub is not deleted.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/train.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "295-298",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "0bc5c7ad5039"
+        }
+      ]
+    },
+    {
+      "id": "0015",
+      "time": "2026-10-20 01:37:42",
+      "summary": "Kaggle: clone the code to /tmp so the notebook output holds only generated files",
+      "explanation": "SETUP used to clone the repo into /kaggle/working/engramdelta, so every notebook output contained the whole code tree. REPO is now /tmp/engramdelta on Kaggle (not saved), and results/ and figures/ are symlinked from the repo to /kaggle/working/results and /kaggle/working/figures, so all existing relative paths still work. The output now contains only results/, figures/, logs/, ckpt/ (unfinished runs) and the results zip. restore() reads PREV_OUTPUTS from <prev>/results and, for outputs made before this change, <prev>/engramdelta/results. All .ipynb files were regenerated.",
+      "files": [
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "54-58",
+              "old": "54-55"
+            },
+            {
+              "kind": "added",
+              "new": "159-166",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "202-203",
+              "old": "191"
+            }
+          ],
+          "added": 15,
+          "removed": 3,
+          "before_existed": true,
+          "after_hash": "9641e6dd0a38"
+        },
+        {
+          "path": "README.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "64-65",
+              "old": null
+            }
+          ],
+          "added": 2,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "fb9bc6b35f5a"
+        }
+      ]
     }
   ]
 }

@@ -51,8 +51,11 @@ NEEDS_GPU, INSTALL_FLA = __NEEDS_GPU__, __INSTALL_FLA__
 NB_NAME = "__NB_NAME__"
 ON_KAGGLE = os.path.isdir("/kaggle/working")
 WORK = pathlib.Path("/kaggle/working") if ON_KAGGLE else pathlib.Path.cwd()
-# Locally (notebook opened from the repo's notebooks/ folder) the repo is the parent directory.
-REPO = WORK / "engramdelta" if ON_KAGGLE else (WORK.parent if WORK.name == "notebooks" else WORK)
+# On Kaggle the code is cloned to /tmp, which is NOT saved, so the notebook output holds only what this session
+# creates: results/, figures/, logs/, ckpt/ (unfinished runs only) and the results zip. results/ and figures/ are
+# symlinked from the repo into /kaggle/working. Locally (notebook opened from the repo's notebooks/ folder) the
+# repo is the parent directory.
+REPO = pathlib.Path("/tmp/engramdelta") if ON_KAGGLE else (WORK.parent if WORK.name == "notebooks" else WORK)
 
 # 0. session log: everything this notebook prints (and every error traceback) also goes to
 #    logs/<notebook>__<UTC start>.log, with elapsed seconds per line. After every cell, the log and the whole
@@ -153,6 +156,14 @@ if not REPO.exists():
         run(f"git -C {REPO} checkout -q {REPO_REF}")
     else:
         shutil.copytree(CODE_DATASET, REPO)
+if ON_KAGGLE:
+    for d in ("results", "figures"):
+        out, link = WORK / d, REPO / d
+        out.mkdir(parents=True, exist_ok=True)
+        if not link.is_symlink():
+            if link.exists():
+                shutil.copytree(link, out, dirs_exist_ok=True); shutil.rmtree(link)
+            link.symlink_to(out, target_is_directory=True)
 os.chdir(REPO); sys.path.insert(0, str(REPO))
 try:
     commit = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True, check=True).stdout.strip()
@@ -188,7 +199,8 @@ def restore(src, dst):
                 os.makedirs(os.path.dirname(d), exist_ok=True); shutil.copy2(s, d); n += 1
     return n
 for prev in PREV_OUTPUTS:
-    n1 = restore(os.path.join(prev, "engramdelta", "results"), str(REPO / "results"))
+    n1 = restore(os.path.join(prev, "results"), str(REPO / "results"))
+    n1 += restore(os.path.join(prev, "engramdelta", "results"), str(REPO / "results"))   # outputs made before this layout
     n2 = restore(os.path.join(prev, "ckpt"), str(WORK / "ckpt"))
     print(f"restored from {prev}: {n1} result files, {n2} checkpoint files")
 if os.environ.get("HF_REPO"):

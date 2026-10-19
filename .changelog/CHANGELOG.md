@@ -428,3 +428,33 @@ Diff: `.changelog/entries/0012/diff.patch`
 **What the change does:** The shared SETUP cell now tees sys.stdout/stderr into logs/<notebook>__<UTC start>.log with elapsed seconds on every line, and registers IPython pre/post_run_cell hooks that mark each cell's start and write the full traceback of a failing cell. After every cell, bundle() copies the session log into results/_logs/notebooks/ and zips results/ (result JSONs + per-run logs, no checkpoints) into <notebook>_results.zip in the output, so a partial zip exists even if the session dies. FINISH prints how to download and unzip it. main() substitutes the notebook name for __NB_NAME__. .gitignore ignores local logs/ and *_results.zip; README documents the download step. All 12 .ipynb files were regenerated from build_notebooks.py.
 
 Diff: `.changelog/entries/0013/diff.patch`
+
+---
+
+## [0014] Delete a finished run's resume checkpoint after its result file is written
+*2026-10-20 01:37:42*
+
+- **File:** `engramdelta/scripts/train.py` (modified, +4/-0)
+  - **Lines:** 295-298 added
+
+**Summary:** Delete a finished run's resume checkpoint after its result file is written
+
+**What the change does:** train() kept ckpt/<run_id>/last.pt after a run finished, although sweep skips any run whose result JSON exists, so the file is never used again. It cost about 15 MB per Phase 1 run (most of NB02's 633 MB output). After the result is written (rank 0, write_result_file=True) last.pt and its then-empty folder are removed. Preempted runs keep their checkpoint; final.pt (save_final) is untouched; a copy already pushed to the HF Hub is not deleted.
+
+Diff: `.changelog/entries/0014/diff.patch`
+
+---
+
+## [0015] Kaggle: clone the code to /tmp so the notebook output holds only generated files
+*2026-10-20 01:37:42*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +15/-3)
+  - **Lines:** 54-58 modified (were 54-55 before); 159-166 added; 202-203 modified (were 191 before)
+- **File:** `README.md` (modified, +2/-0)
+  - **Lines:** 64-65 added
+
+**Summary:** Kaggle: clone the code to /tmp so the notebook output holds only generated files
+
+**What the change does:** SETUP used to clone the repo into /kaggle/working/engramdelta, so every notebook output contained the whole code tree. REPO is now /tmp/engramdelta on Kaggle (not saved), and results/ and figures/ are symlinked from the repo to /kaggle/working/results and /kaggle/working/figures, so all existing relative paths still work. The output now contains only results/, figures/, logs/, ckpt/ (unfinished runs) and the results zip. restore() reads PREV_OUTPUTS from <prev>/results and, for outputs made before this change, <prev>/engramdelta/results. All .ipynb files were regenerated.
+
+Diff: `.changelog/entries/0015/diff.patch`

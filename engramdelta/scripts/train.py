@@ -292,6 +292,10 @@ def train(cfg: dict, run_id: Optional[str] = None, results_dir: str = "results",
         hub_sync.push_file(path, os.path.relpath(path, os.path.dirname(os.path.abspath(results_dir))))
         log(f"[{run_id}] wrote {path}")
     dist.barrier()
+    if write_result_file and dist.is_main() and os.path.exists(ck_path):
+        os.remove(ck_path)      # the run is finished and will never resume: do not keep ~15-60 MB per run
+        if not os.listdir(os.path.dirname(ck_path)):
+            os.rmdir(os.path.dirname(ck_path))
     log(f"[{run_id}] final metrics {metrics}")
     return record
 
