@@ -1,0 +1,4 @@
+inherit: base.yaml
+arm: A2
+model:
+  engram: {enabled: true}

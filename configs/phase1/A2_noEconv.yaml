@@ -1,0 +1,4 @@
+inherit: base.yaml
+arm: A2_noEconv
+model:
+  engram: {enabled: true, use_conv: false}   # H4: Engram conv off

@@ -1,0 +1,5 @@
+inherit: base.yaml
+arm: A5
+model:
+  match_nonembed_of: A2
+  swa: {enabled: true}      # window 16 at the Engram block

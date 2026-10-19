@@ -1,0 +1,5 @@
+inherit: base.yaml
+arm: A6
+model:
+  mixer: none              # Engram-only probe: no sequence mixer (leak check)
+  engram: {enabled: true}

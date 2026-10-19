@@ -1,0 +1,5 @@
+inherit: base.yaml
+arm: A2_noboth
+model:
+  engram: {enabled: true, use_conv: false}
+  gdn: {use_short_conv: false}               # H4: both convs off

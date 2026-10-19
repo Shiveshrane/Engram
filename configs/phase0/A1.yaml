@@ -1,0 +1,4 @@
+inherit: base.yaml
+arm: A1
+model:
+  match_nonembed_of: A2   # MLP width chosen to match A2 non-embedding params

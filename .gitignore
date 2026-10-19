@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+.pytest_cache/
+ckpt/
+manifests/
+figures/
+*.tmp
+.hub_tmp/
+GIT_COMMIT
+.DS_Store

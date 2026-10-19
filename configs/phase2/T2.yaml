@@ -1,0 +1,6 @@
+inherit: base.yaml
+arm: T2
+model:
+  match_nonembed_of: A2
+  mixer: attn
+  engram: {enabled: true}

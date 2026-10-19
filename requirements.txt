@@ -1,0 +1,14 @@
+# Core (Kaggle images already ship torch, numpy, pyyaml, pandas, matplotlib, datasets, tokenizers, huggingface_hub)
+torch>=2.4
+numpy
+sympy
+einops            # only for the vendored FLA naive reference used by tests
+pyyaml
+pandas
+matplotlib
+pytest
+tokenizers        # Phase 2 tokenizer and Engram tokenizer compression
+datasets          # Phase 2 data prep (FineWeb-Edu streaming)
+huggingface_hub   # optional checkpoint / result sync
+# Optional, CUDA only. Install with --no-deps so pip never replaces Kaggle's torch:
+#   pip install --no-deps flash-linear-attention

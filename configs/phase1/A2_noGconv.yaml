@@ -1,0 +1,5 @@
+inherit: base.yaml
+arm: A2_noGconv
+model:
+  engram: {enabled: true}
+  gdn: {use_short_conv: false}               # H4: GDN short conv off

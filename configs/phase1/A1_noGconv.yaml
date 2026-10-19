@@ -1,0 +1,5 @@
+inherit: base.yaml
+arm: A1_noGconv
+model:
+  match_nonembed_of: A2
+  gdn: {use_short_conv: false}               # H4 reference: A1 without GDN short conv

@@ -1,0 +1,1573 @@
+{
+  "entries": [
+    {
+      "id": "0001",
+      "time": "2026-10-19 00:23:10",
+      "summary": "Add model code: Engram port, GDN mixer, attention/SWA/linear-attention mixers, full model, vendored references",
+      "explanation": "New package engramdelta.models. engram.py ports DeepSeek's engram_demo_v1.py (hash, prime tables, multi-head embedding, gating, dilated short conv) to hc_mult=1 with torch-side hashing. gdn_block.py reimplements FLA's GatedDeltaNet layer with a switchable core (FLA Triton kernel or a pure-PyTorch chunked delta rule using solve_triangular) plus a recurrent reference that captures states for analysis. model.py assembles arms A1-A6, T1, T2, LA from one config, computes loss only at loss positions (answers + lambda-weighted filler), counts parameters (embedding vs non-embedding) and matches MLP width for parameter matching. third_party/ holds the unchanged reference files with licenses and provenance.",
+      "files": [
+        {
+          "path": "engramdelta/__init__.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1",
+              "old": null
+            }
+          ],
+          "added": 1,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "e93af39b7762"
+        },
+        {
+          "path": "engramdelta/models/engram.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-281",
+              "old": null
+            }
+          ],
+          "added": 281,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "e0f919b18d79"
+        },
+        {
+          "path": "engramdelta/models/gdn_block.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-257",
+              "old": null
+            }
+          ],
+          "added": 257,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "283bae43fdcc"
+        },
+        {
+          "path": "engramdelta/models/transformer_block.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-61",
+              "old": null
+            }
+          ],
+          "added": 61,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "b2443593a4cf"
+        },
+        {
+          "path": "engramdelta/models/swa.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-13",
+              "old": null
+            }
+          ],
+          "added": 13,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "3fd13ed9a654"
+        },
+        {
+          "path": "engramdelta/models/linear_attn.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-53",
+              "old": null
+            }
+          ],
+          "added": 53,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "09c981034f03"
+        },
+        {
+          "path": "engramdelta/models/model.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-251",
+              "old": null
+            }
+          ],
+          "added": 251,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "ba66ba129d5b"
+        },
+        {
+          "path": "third_party/README.md",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-16",
+              "old": null
+            }
+          ],
+          "added": 16,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "200a4da2a961"
+        },
+        {
+          "path": "third_party/engram_demo_v1.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-423",
+              "old": null
+            }
+          ],
+          "added": 423,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "9d082070654d"
+        },
+        {
+          "path": "third_party/fla_naive.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-161",
+              "old": null
+            }
+          ],
+          "added": 161,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "d1cf17992349"
+        },
+        {
+          "path": "third_party/LICENSE-ENGRAM",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-202",
+              "old": null
+            }
+          ],
+          "added": 202,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "9debfe045c2a"
+        },
+        {
+          "path": "third_party/LICENSE-FLA",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-21",
+              "old": null
+            }
+          ],
+          "added": 21,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "41a83c8187ef"
+        }
+      ]
+    },
+    {
+      "id": "0002",
+      "time": "2026-10-19 00:27:12",
+      "summary": "Add MQAR/LM data, evaluation (recall, state occupancy, LM buckets/copy loss) and DDP/checkpoint/logging/config utilities",
+      "explanation": "data/mqar.py generates MQAR with clutter placements a/b from a fixed phrase pool, per-sequence key-value resampling, answer + filler-next-token targets, and step-seeded deterministic streams; data/lm_data.py serves rank-strided deterministic windows from uint16 memmaps. eval/ adds DDP-sharded MQAR recall, GDN state effective-rank/Frobenius/spectrum via the recurrent reference, beta/alpha stats per token category, and LM eval with position buckets and the in-context-copy mask. utils/ adds idempotent torchrun/DDP setup with a parameter-sync guard, atomic checkpoints with per-rank RNG, immutable read-only result JSON, optional HF Hub sync, and YAML configs with inheritance and dotted overrides.",
+      "files": [
+        {
+          "path": "engramdelta/data/mqar.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-209",
+              "old": null
+            }
+          ],
+          "added": 209,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "cf8c56e7c904"
+        },
+        {
+          "path": "engramdelta/data/lm_data.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-69",
+              "old": null
+            }
+          ],
+          "added": 69,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "165266e41e66"
+        },
+        {
+          "path": "engramdelta/eval/mqar_eval.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-38",
+              "old": null
+            }
+          ],
+          "added": 38,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "50d6374e6221"
+        },
+        {
+          "path": "engramdelta/eval/state_metrics.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-120",
+              "old": null
+            }
+          ],
+          "added": 120,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "1557acf53887"
+        },
+        {
+          "path": "engramdelta/eval/lm_eval.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-74",
+              "old": null
+            }
+          ],
+          "added": 74,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "6211417f0c63"
+        },
+        {
+          "path": "engramdelta/utils/dist.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-114",
+              "old": null
+            }
+          ],
+          "added": 114,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "49097dcf9998"
+        },
+        {
+          "path": "engramdelta/utils/checkpoint.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-54",
+              "old": null
+            }
+          ],
+          "added": 54,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "4f8b47e1da75"
+        },
+        {
+          "path": "engramdelta/utils/run_log.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-85",
+              "old": null
+            }
+          ],
+          "added": 85,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "f9aae91e434f"
+        },
+        {
+          "path": "engramdelta/utils/hub_sync.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-78",
+              "old": null
+            }
+          ],
+          "added": 78,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "2bdee24212ff"
+        },
+        {
+          "path": "engramdelta/utils/config.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-55",
+              "old": null
+            }
+          ],
+          "added": 55,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "f26210d07baf"
+        }
+      ]
+    },
+    {
+      "id": "0003",
+      "time": "2026-10-19 11:44:57",
+      "summary": "Add training (synchronized DDP), sweep/manifest/budget tooling, checks, data prep, evals and analysis",
+      "explanation": "train.py runs one MQAR or LM run under torchrun with DDP gradient all-reduce, no_sync accumulation, fp16 GradScaler, cosine LR, parameter-sync guard, atomic resumable checkpoints, time-limit exit code 3 and immutable result JSON. make_manifest.py encodes the exact experiment groups E0.3-E2.2 and resolves prereg 'auto' values by pre-registered rules; sweep.py runs manifests with skip-if-done and a session budget; budget.py estimates GPU-hours from measured throughput. ddp_check/nccl_smoke/bench_kernels implement the Phase 0 DDP, NCCL and kernel tests; prepare_lm_data/eval_lm/run_state_metrics/sync cover Phase 2 data, LM eval, state metrics and HF Hub sync; analysis.py and make_plots.py produce tables, rule checks and figures without interpretation.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/train.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-322",
+              "old": null
+            }
+          ],
+          "added": 322,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "2425ae1a219b"
+        },
+        {
+          "path": "engramdelta/scripts/sweep.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-93",
+              "old": null
+            }
+          ],
+          "added": 93,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "c101971b12b6"
+        },
+        {
+          "path": "engramdelta/scripts/make_manifest.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-195",
+              "old": null
+            }
+          ],
+          "added": 195,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "5c84ae84c7e5"
+        },
+        {
+          "path": "engramdelta/scripts/budget.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-97",
+              "old": null
+            }
+          ],
+          "added": 97,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "a1ad55f911ca"
+        },
+        {
+          "path": "engramdelta/scripts/param_table.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-64",
+              "old": null
+            }
+          ],
+          "added": 64,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "32071382c160"
+        },
+        {
+          "path": "engramdelta/scripts/ddp_check.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-123",
+              "old": null
+            }
+          ],
+          "added": 123,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "cd63db256f04"
+        },
+        {
+          "path": "engramdelta/scripts/nccl_smoke.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-47",
+              "old": null
+            }
+          ],
+          "added": 47,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "df24068d8656"
+        },
+        {
+          "path": "engramdelta/scripts/bench_kernels.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-147",
+              "old": null
+            }
+          ],
+          "added": 147,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "785c2843f962"
+        },
+        {
+          "path": "engramdelta/scripts/prepare_lm_data.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-134",
+              "old": null
+            }
+          ],
+          "added": 134,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "e681544591f3"
+        },
+        {
+          "path": "engramdelta/scripts/eval_lm.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-76",
+              "old": null
+            }
+          ],
+          "added": 76,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "bfeb147732eb"
+        },
+        {
+          "path": "engramdelta/scripts/run_state_metrics.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-65",
+              "old": null
+            }
+          ],
+          "added": 65,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "e6a27e7877ce"
+        },
+        {
+          "path": "engramdelta/scripts/sync.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-34",
+              "old": null
+            }
+          ],
+          "added": 34,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "df2fb0717238"
+        },
+        {
+          "path": "engramdelta/scripts/make_plots.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-145",
+              "old": null
+            }
+          ],
+          "added": 145,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "01f78b4bf53c"
+        },
+        {
+          "path": "engramdelta/analysis.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-213",
+              "old": null
+            }
+          ],
+          "added": 213,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "80e91427bc07"
+        }
+      ]
+    },
+    {
+      "id": "0004",
+      "time": "2026-10-19 12:00:39",
+      "summary": "Add Phase 0 test suite (tests 1-9, DDP, LM eval, manifests)",
+      "explanation": "Causality (Engram module, hash padding, every arm), overfit-one-batch for every arm, parameter table with matching invariants, kernel correctness vs FLA naive reference, Engram parity vs the vendored DeepSeek demo (stubbed tokenizer), MQAR format/leak checks with an A6 chance probe, fp16 vs fp32 (CUDA only), determinism/immutable results/single-process resume, 2-process gloo DDP checks via ddp_check, LM copy-mask/sampler/eval checks, and manifest run counts (Phase 1 = 167). test_repro_known reads Kaggle E0.4/E0.5 results. 67 pass locally; CUDA/FLA/Kaggle-result tests skip.",
+      "files": [
+        {
+          "path": "tests/conftest.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-7",
+              "old": null
+            }
+          ],
+          "added": 7,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "c9f6b0005339"
+        },
+        {
+          "path": "tests/helpers.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-41",
+              "old": null
+            }
+          ],
+          "added": 41,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "4cdcadf473fc"
+        },
+        {
+          "path": "tests/test_causality.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-88",
+              "old": null
+            }
+          ],
+          "added": 88,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "74b27f891c98"
+        },
+        {
+          "path": "tests/test_overfit.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-22",
+              "old": null
+            }
+          ],
+          "added": 22,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "7773c329b00c"
+        },
+        {
+          "path": "tests/test_params.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-27",
+              "old": null
+            }
+          ],
+          "added": 27,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "d1d28f917989"
+        },
+        {
+          "path": "tests/test_kernels.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-114",
+              "old": null
+            }
+          ],
+          "added": 114,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "7bac8ebcb013"
+        },
+        {
+          "path": "tests/test_engram_parity.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-105",
+              "old": null
+            }
+          ],
+          "added": 105,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "9bb13dfeca9d"
+        },
+        {
+          "path": "tests/test_mqar_leak.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-100",
+              "old": null
+            }
+          ],
+          "added": 100,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "7d5bb86d55c0"
+        },
+        {
+          "path": "tests/test_repro_known.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-39",
+              "old": null
+            }
+          ],
+          "added": 39,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "b69a47e32484"
+        },
+        {
+          "path": "tests/test_fp16.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-31",
+              "old": null
+            }
+          ],
+          "added": 31,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "fcaa57570390"
+        },
+        {
+          "path": "tests/test_determinism.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-42",
+              "old": null
+            }
+          ],
+          "added": 42,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "155ffbdc36b1"
+        },
+        {
+          "path": "tests/test_ddp.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-32",
+              "old": null
+            }
+          ],
+          "added": 32,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "99adfe7d2652"
+        },
+        {
+          "path": "tests/test_lm_eval.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-63",
+              "old": null
+            }
+          ],
+          "added": 63,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "8058ef814268"
+        },
+        {
+          "path": "tests/test_manifest.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-29",
+              "old": null
+            }
+          ],
+          "added": 29,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "2d28ceef8206"
+        }
+      ]
+    },
+    {
+      "id": "0005",
+      "time": "2026-10-19 12:07:16",
+      "summary": "Add --extra-set option to make_manifest",
+      "explanation": "make_manifest previously wrote runs with only the group's own overrides. It now accepts repeatable --extra-set key=value overrides appended to every run, used by NB20 to point Phase 2 runs at the attached LM data path.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/make_manifest.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "179-180",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "188-189",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "8ac0420b27e8"
+        }
+      ]
+    },
+    {
+      "id": "0006",
+      "time": "2026-10-19 12:07:16",
+      "summary": "Fix plot layout and make the DDP test use loopback rendezvous",
+      "explanation": "make_plots: the arms chart now shows only cells where at least two arms were run, the legend sits outside the plot, and the E0.4 N axis shows plain numbers. test_ddp: torchrun --standalone timed out resolving the macOS .local hostname; the test now uses --master_addr=127.0.0.1 with a free port and GLOO_SOCKET_IFNAME=lo0 on macOS.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/make_plots.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "11",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "57-58",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "90-91",
+              "old": "87"
+            },
+            {
+              "kind": "modified",
+              "new": "108",
+              "old": "104"
+            }
+          ],
+          "added": 6,
+          "removed": 2,
+          "before_existed": true,
+          "after_hash": "ba7ea325abf0"
+        }
+      ]
+    },
+    {
+      "id": "0007",
+      "time": "2026-10-19 12:07:16",
+      "summary": "Add per-arm YAML configs for phases 0-2 and the machine-readable pre-registration",
+      "explanation": "phase1/base.yaml fixes the MQAR task and the d=128, 2-block, 4x32-head GDN model with Engram at block 1 (2.4k rows/head); each arm file (A1-A6, T1, H4 variants) is a small override, with match_nonembed_of: A2 for arms without Engram. phase0 inherits phase1 with F=0 and adds LA. phase2 defines the d=384, 8-block LM with Engram at blocks 1 and 3 (14.7k rows/head), A1/A2/A3/A5/T1/T2. prereg.yaml holds N_star, phase1_steps, LRs and Phase 2 tokens, to be filled after Phase 0.",
+      "files": [
+        {
+          "path": "configs/phase0/A1.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "18fdf3e8b03a"
+        },
+        {
+          "path": "configs/phase0/A2.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "a8b1265b6892"
+        },
+        {
+          "path": "configs/phase0/A3.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "2527f7d851ff"
+        },
+        {
+          "path": "configs/phase0/A4.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "10665bd7e7f0"
+        },
+        {
+          "path": "configs/phase0/A5.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "60730014c734"
+        },
+        {
+          "path": "configs/phase0/A6.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "ca36cc47ff08"
+        },
+        {
+          "path": "configs/phase0/base.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-6",
+              "old": null
+            }
+          ],
+          "added": 6,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "b55148ef47ca"
+        },
+        {
+          "path": "configs/phase0/LA.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "49d3b8c91a08"
+        },
+        {
+          "path": "configs/phase0/T1.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "33b7255932c0"
+        },
+        {
+          "path": "configs/phase1/A1_noGconv.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "de9dd580a16e"
+        },
+        {
+          "path": "configs/phase1/A1.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "18fdf3e8b03a"
+        },
+        {
+          "path": "configs/phase1/A2_noboth.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "6e915cb7a6b8"
+        },
+        {
+          "path": "configs/phase1/A2_noEconv.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "cc8b1686db96"
+        },
+        {
+          "path": "configs/phase1/A2_noGconv.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "8858e109e4cc"
+        },
+        {
+          "path": "configs/phase1/A2.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "a8b1265b6892"
+        },
+        {
+          "path": "configs/phase1/A3.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "2527f7d851ff"
+        },
+        {
+          "path": "configs/phase1/A4.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "10665bd7e7f0"
+        },
+        {
+          "path": "configs/phase1/A5.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "60730014c734"
+        },
+        {
+          "path": "configs/phase1/A6.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "ca36cc47ff08"
+        },
+        {
+          "path": "configs/phase1/base.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-59",
+              "old": null
+            }
+          ],
+          "added": 59,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "5e506e19c103"
+        },
+        {
+          "path": "configs/phase1/T1.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "33b7255932c0"
+        },
+        {
+          "path": "configs/phase2/A1.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "993cbd75a404"
+        },
+        {
+          "path": "configs/phase2/A2.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "a8b1265b6892"
+        },
+        {
+          "path": "configs/phase2/A3.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-4",
+              "old": null
+            }
+          ],
+          "added": 4,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "2c2b4f81c0b6"
+        },
+        {
+          "path": "configs/phase2/A5.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "ec6dca515fb1"
+        },
+        {
+          "path": "configs/phase2/base.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-49",
+              "old": null
+            }
+          ],
+          "added": 49,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "509111f26f6e"
+        },
+        {
+          "path": "configs/phase2/T1.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-5",
+              "old": null
+            }
+          ],
+          "added": 5,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "33b7255932c0"
+        },
+        {
+          "path": "configs/phase2/T2.yaml",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-6",
+              "old": null
+            }
+          ],
+          "added": 6,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "b2b38d7003f1"
+        }
+      ]
+    },
+    {
+      "id": "0008",
+      "time": "2026-10-19 12:07:16",
+      "summary": "Add project docs, pre-registration, deviations log and the 12 Kaggle notebooks",
+      "explanation": "README explains layout, local use, the Kaggle notebook order and synchronized DDP. DEVIATIONS lists every departure from the DeepSeek/FLA references and the design doc; PREREG fixes the decision rules and resolution rules before results exist; CHANGELOG tracks eval/data changes (design rule 3). notebooks/build_notebooks.py generates notebooks 00-22 with a shared setup cell (clone/copy code, --no-deps installs, secrets, HF or output-chaining restore) and manifest-driven resumable sweeps.",
+      "files": [
+        {
+          "path": "README.md",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-73",
+              "old": null
+            }
+          ],
+          "added": 73,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "536eeb0604a4"
+        },
+        {
+          "path": "DEVIATIONS.md",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-40",
+              "old": null
+            }
+          ],
+          "added": 40,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "e599ea2886b8"
+        },
+        {
+          "path": "CHANGELOG.md",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-9",
+              "old": null
+            }
+          ],
+          "added": 9,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "8d68f381aafd"
+        },
+        {
+          "path": "PREREG.md",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-52",
+              "old": null
+            }
+          ],
+          "added": 52,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "1e410e05e827"
+        },
+        {
+          "path": "requirements.txt",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-14",
+              "old": null
+            }
+          ],
+          "added": 14,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "3da58cb143db"
+        },
+        {
+          "path": ".gitignore",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-10",
+              "old": null
+            }
+          ],
+          "added": 10,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "ae5c61406d0c"
+        },
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-653",
+              "old": null
+            }
+          ],
+          "added": 653,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "875f966c9b69"
+        },
+        {
+          "path": "notebooks/00_env_and_kernels.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-107",
+              "old": null
+            }
+          ],
+          "added": 107,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "4b94db982143"
+        },
+        {
+          "path": "notebooks/01_phase0_tests.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-102",
+              "old": null
+            }
+          ],
+          "added": 102,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "e69d6e7d682a"
+        },
+        {
+          "path": "notebooks/02_phase0_known_result.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-107",
+              "old": null
+            }
+          ],
+          "added": 107,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "224fb3f60bcb"
+        },
+        {
+          "path": "notebooks/03_lm_data_prep.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-47",
+              "old": null
+            }
+          ],
+          "added": 47,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "f1371a7d485f"
+        },
+        {
+          "path": "notebooks/10_phase1_pilot.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-68",
+              "old": null
+            }
+          ],
+          "added": 68,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "e2ae19145bcd"
+        },
+        {
+          "path": "notebooks/11_phase1_H1_grid.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-61",
+              "old": null
+            }
+          ],
+          "added": 61,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "658259c13ff6"
+        },
+        {
+          "path": "notebooks/12_phase1_arms.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-61",
+              "old": null
+            }
+          ],
+          "added": 61,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "c4172f9f2daa"
+        },
+        {
+          "path": "notebooks/13_phase1_H4.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-61",
+              "old": null
+            }
+          ],
+          "added": 61,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "c545c6a778e8"
+        },
+        {
+          "path": "notebooks/14_phase1_analysis.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-155",
+              "old": null
+            }
+          ],
+          "added": 155,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "bc67e71e9b9c"
+        },
+        {
+          "path": "notebooks/20_phase2_train.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-68",
+              "old": null
+            }
+          ],
+          "added": 68,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "0790fcc28489"
+        },
+        {
+          "path": "notebooks/21_phase2_eval.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-61",
+              "old": null
+            }
+          ],
+          "added": 61,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "063c8d289abb"
+        },
+        {
+          "path": "notebooks/22_phase2_analysis.ipynb",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-54",
+              "old": null
+            }
+          ],
+          "added": 54,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "033b38d045ef"
+        }
+      ]
+    }
+  ]
+}

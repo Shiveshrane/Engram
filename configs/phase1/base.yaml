@@ -1,0 +1,59 @@
+# Phase 1 (MQAR) base config. Every arm file in this directory inherits it.
+# Cell values (data.N / F / P / placement / filler_weight), seed, LR and steps are set per run by the manifests
+# (engramdelta/scripts/make_manifest.py) from configs/prereg.yaml.
+phase: phase1
+group: misc
+task: mqar
+seed: 0
+data:
+  N: 64                # pairs; the Phase 1 grid uses N_star and 2*N_star
+  F: 0                 # clutter tokens
+  P: 64                # phrase pool size
+  placement: a         # a: clutter between pairs and queries; b: interleaved between pairs
+  phrase_len: 3
+  n_keys: 2048
+  n_values: 2048
+  n_filler: 512
+  filler_weight: 1.0   # lambda: weight of the filler next-token loss (primary condition: 1.0)
+  pool_seed: 1234
+  eval_seed: 999999
+  eval_size: 2000
+model:
+  d_model: 128
+  n_layers: 2
+  mixer: gdn
+  n_heads: 4
+  head_dim: 32         # 32 x 32 state per head
+  mlp_hidden: 512
+  tie_embeddings: true
+  gdn: {expand_v: 1.0, use_short_conv: true, conv_size: 4, use_gate: true, backend: torch, chunk_size: 64}
+  swa: {enabled: false, layers: [1], window: 16}
+  engram:
+    enabled: false
+    layers: [1]        # block index 1 = reference layer_ids[0]; identical for every arm that has Engram/SWA
+    orders: [2, 3]
+    n_heads_per_order: 4
+    embed_per_order: 128
+    rows_per_head: 2400   # -> about 0.62M table params, about 1x the backbone's non-embedding params
+    kernel_size: 4
+    conv_dilation: 3
+    use_conv: true
+    frozen_table: false
+    seed: 0
+    compress: false    # synthetic task: identity token map
+train:
+  steps: 2000          # replaced by prereg phase1_steps (chosen from E0.6)
+  global_batch: 64     # per rank 32 on 2 GPUs
+  grad_accum: 1
+  lr: 1.0e-3           # replaced per arm by the E1.0a LR pilot
+  min_lr_ratio: 0.1
+  warmup: 100
+  weight_decay: 0.1
+  betas: [0.9, 0.95]
+  clip: 1.0
+  precision: fp16
+  log_every: 50
+  eval_every: 0
+  ckpt_every: 500
+  sync_check_every: 500
+  save_final: false

@@ -1,0 +1,5 @@
+inherit: base.yaml
+arm: LA
+model:
+  match_nonembed_of: A2
+  mixer: linear_attn        # vanilla linear attention (known-result baseline)

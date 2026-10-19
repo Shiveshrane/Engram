@@ -1,0 +1,4 @@
+inherit: base.yaml
+arm: A3
+model:
+  engram: {enabled: true, frozen_table: true}   # table frozen at random init

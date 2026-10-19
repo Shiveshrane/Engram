@@ -1,0 +1,6 @@
+# Phase 0 (plain MQAR, no clutter): same models as Phase 1, used for the known-result check (test 7),
+# the leak test (A6) and the step-budget curve.
+inherit: ../phase1/base.yaml
+phase: phase0
+data:
+  F: 0

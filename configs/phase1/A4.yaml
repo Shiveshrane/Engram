@@ -1,0 +1,5 @@
+inherit: base.yaml
+arm: A4
+model:
+  # unigram only; 8 heads x 32 dims keeps the table and projection sizes identical to A2
+  engram: {enabled: true, orders: [1], n_heads_per_order: 8, embed_per_order: 256}
