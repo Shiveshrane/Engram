@@ -13,7 +13,7 @@ import pandas as pd
 from .utils.run_log import read_results
 
 CELL = ["N", "F", "P", "placement", "lam"]
-PHASE1_MAIN_GROUPS = {"E1.1", "E1.2", "E1.2r", "E1.2l", "E1.3"}
+PHASE1_MAIN_GROUPS = {"E1.1", "E1.2", "E1.2l", "E1.3"}
 
 
 def load(results_dir: str = "results", phase: Optional[str] = None) -> pd.DataFrame:
@@ -162,8 +162,9 @@ def h1_grid(df: pd.DataFrame) -> pd.DataFrame:
     return summarize(e, ["N", "placement", "P", "F"]).sort_values(["N", "placement", "P", "F"])
 
 
-def arms_table(df: pd.DataFrame) -> pd.DataFrame:
-    e = df[df["group"].isin(PHASE1_MAIN_GROUPS) & (df["lam"] == 1.0)]
+def arms_table(df: pd.DataFrame, lam: Optional[float] = None) -> pd.DataFrame:
+    """Mean/std recall per cell and arm in the main Phase 1 groups (only filler-loss weight `lam` if given)."""
+    e = df[df["group"].isin(PHASE1_MAIN_GROUPS) & ((df["lam"] == lam) if lam is not None else True)]
     return summarize(e, ["N", "F", "P", "placement", "arm"]).sort_values(["N", "F", "placement", "arm"])
 
 
@@ -173,7 +174,7 @@ def gate1_table(df: pd.DataFrame, prereg: dict) -> pd.DataFrame:
     pc = prereg["primary_cell"]
     cell = dict(N=Ns, P=pc["P"], placement=pc["placement"], lam=pc["filler_weight"])
     g = PHASE1_MAIN_GROUPS
-    rows = [{"hypothesis": "H1: A1(F=0) vs A1(F=512)",
+    rows = [{"hypothesis": f"H1: A1(F=0) vs A1(F={pc['F']})",
              **compare(select(df, "A1", g, F=0, N=Ns, P=pc["P"], lam=pc["filler_weight"]),
                        select(df, "A1", g, F=pc["F"], **cell), "A1 F=0", f"A1 F={pc['F']}")}]
     for other in ("A1", "A3", "A4"):

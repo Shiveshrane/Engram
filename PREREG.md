@@ -9,8 +9,9 @@ run**, and write the commit hash below. Everything else on this page is fixed no
 
 - **Significance.** |mean_A − mean_B| > 2 × pooled seed std, with n ≥ 3 seeds per arm. Pooled std =
   sqrt(((n_A−1)s_A² + (n_B−1)s_B²) / (n_A+n_B−2)). Metric: query recall on the cell's fixed 2,000-sequence eval set.
-- **Primary cell:** N = N\*, F = primary F (from E0.7), P = 64, placement a, lambda = 1. Every other cell is secondary / descriptive.
-- **H1:** A1(F=0) > A1(F=512) significantly at the primary cell (same N, P).
+- **Primary cell:** N = N\* = 32, F = 512, P = 64, placement a, **lambda = 0** (answer-only loss; option A, see the
+  2026-10-20 entries below). Every other cell is secondary / descriptive.
+- **H1:** A1(F=0) > A1(F=512) significantly (N = N\*, P = 64, a, lambda = 0).
 - **H2:** A2 > A1 significantly at the primary cell, **and** A2 > A3 and A2 > A4 significantly. If A2 > A1 but A3 or A4 is
   not significantly below A2, the claim is reframed as "gated side-pathway", not "n-gram offload" (design §7.4).
 - **H4:** report the 2×2 table (Engram conv × GDN short conv) on A2 at the primary cell. "Changes little" = within 2σ of
@@ -21,7 +22,9 @@ run**, and write the commit hash below. Everything else on this page is fixed no
   the gain. The human decides, using the NB14 table.
 - **Test 7 (pipeline check):** A1 > LA + 2σ at ≥ 2 values of N ∈ {16, 32, 64, 128, 256}, and A1 mean recall is
   non-increasing in N beyond the knee (increases smaller than 2 × the A1 seed std count as noise). If this fails: stop.
-- **Leak check:** A6 recall < 1% (chance 1/2048) at every N (E0.5) and under clutter (E1.2l).
+- **Leak check:** A6 recall < 1% (chance 1/2048) at every N (E0.5) and at the primary cell (E1.2l).
+- **Filler-loss check (E1.0c, descriptive):** A1 and A2 at the primary cell with lambda = 1, 3 seeds, reported next to
+  the lambda = 0 results.
 
 ## Rules that resolve values from Phase 0 / pilots (fixed)
 
@@ -60,19 +63,43 @@ run**, and write the commit hash below. Everything else on this page is fixed no
   clutter level is no longer fixed at 512 but chosen by the E0.7 rule above, before any Phase 1 run; the design's
   clutter levels {0, 128, 256, 512} are unchanged and F = 512 stays in E1.1.
 
-## Grid (one-week version, 167 Phase 1 runs; see `engramdelta/scripts/make_manifest.py`)
+- 2026-10-20, after the E0.7 clutter pilot (NB04, code commit d7e02ff), **human decision (option A)**: with lambda = 1,
+  A1 does not learn within 6,000 steps at any clutter level tried (F = 64: 1.7%, 128: 0.4%, 256: 0.0% val recall), so
+  the primary-F rule above found no level. With lambda = 0 (answer-only loss, the standard MQAR loss), A1 learns at
+  F = 512 (66% val recall, breaking the plateau at ~3,000 steps vs ~1,900 without clutter), so clutter hurts without
+  removing all signal. Changes: primary cell = (N\*, F = 512, P = 64, a, lambda = 0); phase1_steps = 6,000 from that
+  run; E1.0c now checks lambda = 1; the grid is cut to 67 runs (table below) to fit the budget at 6,000 steps. Known
+  limitation, to be stated in any write-up: with lambda = 0 the model is never asked to predict the filler, so it may
+  learn to ignore it rather than offload it to Engram; E1.0c and the E1.4 beta / alpha statistics on filler tokens
+  are the evidence on this.
 
-Cut from the full design for budget: 5 → 3 seeds; the N\*/2 cells; the P sweep at 2N\*; the Engram-placement pilot; the A3
-dose-response; T1 at 1 seed; Phase 2 at 1 seed. If time is left over, the first thing added back is 2 extra seeds of
-A1–A4 at the primary cell.
+## Grid (one-week version, option A: 67 Phase 1 runs, 6,000 steps each; see `engramdelta/scripts/make_manifest.py`)
 
-## Phase 0 outcomes (fill after NB02)
+| Group | Runs | Cells |
+|---|---|---|
+| E1.0a LR pilot | 6 | A1, A2 × LR {3e-4, 1e-3, 3e-3} at the primary cell, 1 seed |
+| E1.0c filler-loss check | 6 | A1, A2 at the primary cell with lambda = 1, 3 seeds |
+| E1.1 H1 | 12 | A1 × F ∈ {0, 128, 256, 512}, 3 seeds |
+| E1.2 H2 + controls | 30 | A2, A3, A4, A5 × F ∈ {0, 512}, 3 seeds; A2 × F ∈ {128, 256}, 3 seeds |
+| E1.2l leak under clutter | 1 | A6 at the primary cell |
+| E1.3 H4 | 12 | A2_noEconv, A2_noGconv, A2_noboth, A1_noGconv at the primary cell, 3 seeds |
+
+All at N = N\* = 32, P = 64, placement a, lambda = 0 unless stated. Estimated 10.5 GPU-h from measured throughput (NB02,
+NB04). Cut from the full design for budget: 5 → 3 seeds; the N\*/2 and 2N\* cells; placement b; the P sweep; the
+Engram-placement pilot; the A3 dose-response; T1 in Phase 1; Phase 2 at 1 seed. If time is left over, the first thing
+added back is 2 extra seeds of A1–A4 at the primary cell.
+
+## Phase 0 outcomes
 
 | Item | Value |
 |------|-------|
-| GDN backend (NB00) | |
-| Test 7 pass? (criterion 1 / 2) | |
-| N\* | |
-| Phase 1 step budget | |
-| Measured Phase 1 run time (min) | |
-| Phase 1 budget estimate (GPU-h) | |
+| GDN backend (NB00) | torch (FLA kernels not used) |
+| Test 7 pass? (criterion 1 / 2) | PASS / PASS. A1 99.8%, 98.9%, 2.0% at N = 16, 32, 64; LA 5.9%, 2.7%, 1.2% |
+| Leak check (E0.5) | PASS at N = 16 … 256 (A6 0.05%, chance 0.049%) |
+| N\* | 32 |
+| E0.6 at N\*, F = 512, lambda = 1 | A1 and A2 at chance in 6,000 steps |
+| E0.7 clutter pilot (A1, N = 32) | lambda = 1: F = 64 → 1.7%, 128 → 0.4%, 256 → 0.0%; lambda = 0, F = 512 → 66% |
+| Primary cell | N = 32, F = 512, P = 64, a, lambda = 0 (option A, human decision) |
+| Phase 1 step budget | 6,000 (E0.7, A1 at F = 512, lambda = 0: 98% of max at 5,750) |
+| Measured Phase 1 run time (min) | 12.1 train min for A1 at F = 512 (T = 640), 6,000 steps |
+| Phase 1 budget estimate (GPU-h) | 10.5 (67 runs) |

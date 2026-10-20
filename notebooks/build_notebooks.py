@@ -645,84 +645,115 @@ NB["03_lm_data_prep"] = notebook([
 ], gpu=False)
 
 NB["10_phase1_pilot"] = notebook([
-    md('''
-    # 10 · Phase 1 pilot: LR (E1.0a) and filler-loss check (E1.0c)  (~1.1 GPU-h)
+    md("""
+    # 10 · Phase 1 · E1.0a: learning-rate pilot  (~1.4 GPU-h, 6 runs)
 
-    **Needs:** `configs/prereg.yaml` with N_star and phase1_steps filled **and committed** (pin `REPO_REF` to that commit).
+    **Needs:** the pre-registration commit (`configs/prereg.yaml`: N_star 32, phase1_steps 6000, primary cell F = 512,
+    λ = 0) pinned as `REPO_REF`. No inputs.
 
-    * **E1.0a:** A1, A2, T1 × LR {3e-4, 1e-3, 3e-3} at (N\\*, F=256, P=64, a), 1 seed (9 runs). Pre-registered rule: best
-      **val** recall wins, ties go to the smaller LR. A3/A4 inherit A2's LR; A5/A6 inherit A1's.
-    * **E1.0c:** A1, A2 at the primary cell with λ = 0 (no filler loss), 3 seeds (6 runs). The λ = 1 counterparts come from
-      E1.1/E1.2.
+    **E1.0a:** A1 and A2 × LR {3e-4, 1e-3, 3e-3} at the primary cell (N = 32, F = 512, P = 64, a, λ = 0), 1 seed, 6,000
+    steps. Pre-registered rule: the best **val** recall wins, ties go to the smaller LR. A3/A4 and the A2 ablations
+    inherit A2's LR; A5, A6 and A1_noGconv inherit A1's.
 
-    To save session overhead you can append later groups to `GROUPS` (e.g. `"E1.1"`): finished runs are always skipped.
-    '''),
+    **Then:** give the zip to Claude (or copy the `resolved LRs` line). The LRs are written into `configs/prereg.yaml` as
+    numbers and committed; notebooks 11–13 then need no inputs and can run in parallel.
+    """),
     *setup_cells(gpu=True),
-    code('''print(open("configs/prereg.yaml").read())'''),
-    *sweep_cells(["E1.0a", "E1.0c"], 1.5),
-    code('''
+    code("""print(open("configs/prereg.yaml").read())"""),
+    *sweep_cells(["E1.0a"], 2.0),
+    code("""
+    import yaml
     from engramdelta import analysis
     df = analysis.load("results")
     print(analysis.lr_pilot_table(df).to_string(index=False))
     from engramdelta.scripts.make_manifest import resolve_lrs, load_prereg
-    print("\\nresolved LRs (pre-registered rule):", resolve_lrs(load_prereg("configs/prereg.yaml"), "results"))
-    '''),
+    pr = load_prereg("configs/prereg.yaml")
+    LRS = resolve_lrs(dict(pr, lr={"A1": "auto", "A2": "auto"}), "results")
+    print("\\nresolved LRs (pre-registered rule):", {k: LRS[k] for k in ("A1", "A2")})
+    yaml.safe_dump({"lr": {"A1": LRS["A1"], "A2": LRS["A2"]}}, open("results/lrs.resolved.yaml", "w"))
+    print("written to results/lrs.resolved.yaml (also in the results zip)")
+    """),
     code(FINISH),
 ])
 
 NB["11_phase1_H1_grid"] = notebook([
-    md('''
-    # 11 · Phase 1 · E1.1: H1 grid on the GDN baseline A1  (~4.1 GPU-h, 54 runs)
+    md("""
+    # 11 · Phase 1 · E1.1 (H1) and E1.0c (filler-loss check)  (~2.8 GPU-h, 18 runs)
 
-    A1 at N ∈ {N\\*, 2N\\*} × (F = 0, or F ∈ {128, 256, 512} × placement {a, b}) at P = 64, plus P ∈ {8, 512} at F = 512, N\\*,
-    {a, b}. 3 seeds, λ = 1. Final weights are saved for the state metrics (E1.4).
+    * **E1.1 (H1):** A1 × clutter F ∈ {0, 128, 256, 512}. Final weights are saved for the state metrics (E1.4).
+    * **E1.0c:** A1 and A2 at the primary cell with the filler loss **on** (λ = 1), for comparison with λ = 0.
 
-    Resumable: rerun (with PREV_OUTPUTS / HF_REPO) until the sweep reports 0 pending.
-    '''),
+    **Needs:** the pre-registration commit (`configs/prereg.yaml` with N_star, phase1_steps, primary_cell **and the
+    numeric LRs from NB10**) pinned as `REPO_REF`. No inputs needed then. (Alternative: leave the LRs on "auto" and attach
+    NB10's output via `PREV_OUTPUTS`.) Notebooks 11, 12 and 13 are independent of each other: they can run at the same
+    time in separate Kaggle sessions.
+
+    All runs: N = N\\* = 32, P = 64, placement a, answer-only loss (λ = 0) unless stated, 6,000 steps, 3 seeds.
+    Resumable: rerun with this notebook's output in `PREV_OUTPUTS` until the sweep reports 0 pending.
+    """),
     *setup_cells(gpu=True),
-    *sweep_cells(["E1.1"], 11.0),
-    code('''
+    *sweep_cells(["E1.1", "E1.0c"], 4.0),
+    code("""
+    import yaml
     from engramdelta import analysis
-    print(analysis.h1_grid(analysis.load("results")).to_string(index=False))
-    '''),
+    pr = yaml.safe_load(open("configs/prereg.yaml"))
+    df = analysis.load("results")
+    print(analysis.h1_grid(df).to_string(index=False))
+    print(analysis.lambda_check(df, pr).to_string(index=False))
+    """),
     code(FINISH),
 ])
 
 NB["12_phase1_arms"] = notebook([
-    md('''
-    # 12 · Phase 1 · E1.2 (H2 + controls), E1.2r (T1 reference), E1.2l (leak under clutter)  (~6.5 GPU-h, 86 runs)
+    md("""
+    # 12 · Phase 1 · E1.2 (H2 + controls) and E1.2l (leak under clutter)  (~3.7 GPU-h, 31 runs)
 
-    * **E1.2:** A2, A3 (frozen table), A4 (unigram), A5 (SWA-16) × N ∈ {N\\*, 2N\\*} × (F = 0, or F = 512 × {a, b}), 3 seeds;
-      plus A2 at F ∈ {128, 256} (N\\*, a).
-    * **E1.2r:** T1 on the same 6 cells, 1 seed (reference only; expected near ceiling).
-    * **E1.2l:** A6 at (2N\\*, F = 512, a/b): must stay at chance.
-    '''),
+    * **E1.2:** A2 (GDN + Engram), A3 (frozen random table), A4 (unigram-only table), A5 (SWA-16) × F ∈ {0, 512}; plus
+      A2 at F ∈ {128, 256} (dose-response). Final weights are saved for the state metrics (E1.4).
+    * **E1.2l:** A6 (Engram only, no sequence mixer) at the primary cell: must stay at chance.
+
+    **Needs:** the pre-registration commit (`configs/prereg.yaml` with N_star, phase1_steps, primary_cell **and the
+    numeric LRs from NB10**) pinned as `REPO_REF`. No inputs needed then. (Alternative: leave the LRs on "auto" and attach
+    NB10's output via `PREV_OUTPUTS`.) Notebooks 11, 12 and 13 are independent of each other: they can run at the same
+    time in separate Kaggle sessions.
+
+    All runs: N = N\\* = 32, P = 64, placement a, answer-only loss (λ = 0) unless stated, 6,000 steps, 3 seeds.
+    Resumable: rerun with this notebook's output in `PREV_OUTPUTS` until the sweep reports 0 pending.
+    """),
     *setup_cells(gpu=True),
-    *sweep_cells(["E1.2", "E1.2r", "E1.2l"], 11.0),
-    code('''
+    *sweep_cells(["E1.2", "E1.2l"], 5.0),
+    code("""
     from engramdelta import analysis
     df = analysis.load("results")
     print(analysis.arms_table(df).to_string(index=False))
     print(analysis.leak_table(df).to_string(index=False))
-    '''),
+    """),
     code(FINISH),
 ])
 
 NB["13_phase1_H4"] = notebook([
-    md('''
-    # 13 · Phase 1 · E1.3: H4 conv ablation  (~0.9 GPU-h, 12 runs)
+    md("""
+    # 13 · Phase 1 · E1.3: H4 conv ablation  (~2.7 GPU-h, 12 runs)
 
-    A2 with {Engram conv off}, {GDN short conv off} and {both off}, plus A1 with the GDN short conv off, at the primary cell
-    (N\\*, F=512, P=64, a, λ=1), 3 seeds. Full A2 and A1 come from E1.2 / E1.1.
-    '''),
+    A2 with {Engram conv off}, {GDN short conv off} and {both off}, plus A1 with the GDN short conv off, at the primary
+    cell. Full A2 and A1 come from E1.2 / E1.1 (NB12 / NB11).
+
+    **Needs:** the pre-registration commit (`configs/prereg.yaml` with N_star, phase1_steps, primary_cell **and the
+    numeric LRs from NB10**) pinned as `REPO_REF`. No inputs needed then. (Alternative: leave the LRs on "auto" and attach
+    NB10's output via `PREV_OUTPUTS`.) Notebooks 11, 12 and 13 are independent of each other: they can run at the same
+    time in separate Kaggle sessions.
+
+    All runs: N = N\\* = 32, P = 64, placement a, answer-only loss (λ = 0) unless stated, 6,000 steps, 3 seeds.
+    Resumable: rerun with this notebook's output in `PREV_OUTPUTS` until the sweep reports 0 pending.
+    """),
     *setup_cells(gpu=True),
-    *sweep_cells(["E1.3"], 2.0),
-    code('''
+    *sweep_cells(["E1.3"], 3.5),
+    code("""
     import yaml
     from engramdelta import analysis
     pr = yaml.safe_load(open("configs/prereg.yaml"))
     print(analysis.h4_table(analysis.load("results"), pr).to_string(index=False))
-    '''),
+    """),
     code(FINISH),
 ])
 
@@ -734,7 +765,8 @@ NB["14_phase1_analysis"] = notebook([
     effective rank / Frobenius norm of the GDN state, plus β and Engram-gate α on pair vs filler tokens).
     **This notebook does not interpret anything. The Gate 1 decision is yours** (design §7.4).
 
-    **Inputs:** every Phase 1 result and final.pt. Attach the outputs of NB10–13 via `PREV_OUTPUTS`, or use `HF_REPO`.
+    **Inputs:** every Phase 1 result and final.pt. Attach the outputs of NB10–13 (Add Input → Your Work, all four) and set
+    `PREV_OUTPUTS = ["/kaggle/input/*"]`, or use `HF_REPO`.
     '''),
     *setup_cells(gpu=False),
     code('''
@@ -759,7 +791,7 @@ NB["14_phase1_analysis"] = notebook([
     '''),
     md("## H1 grid (A1)"),
     code('''print(analysis.h1_grid(df).to_string(index=False))'''),
-    md("## All arms per cell (λ = 1)"),
+    md("## All arms per cell (main groups, λ = 0)"),
     code('''print(analysis.arms_table(df).to_string(index=False))'''),
     md("## Gate 1 table: pre-registered primary-cell comparisons (rule: |diff| > 2 × pooled std, n ≥ 3)"),
     code('''print(analysis.gate1_table(df, pr).to_string(index=False))'''),

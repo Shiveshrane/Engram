@@ -15,8 +15,8 @@ Pre-registered resolution rules (also in PREREG.md):
                   rounded down to a whole number of 65,536-token steps.
   E0.6 / E0.7 N   N = N_star from prereg.yaml if set, otherwise N_star computed from the finished E0.4 results
                   (largest N with A1 mean recall >= 0.9). E0.6 / E0.7 therefore run after E0.4.
-  Primary F       primary_cell.F comes from the E0.7 clutter pilot (largest F in {256, 128} where A1 reaches 0.5 val
-                  recall). Every Phase 1 cell that compares arms "under clutter" uses it; E1.1 keeps F in {128, 256, 512}.
+  Primary cell    primary_cell.F and .filler_weight come from prereg.yaml (after the E0.7 clutter pilot: F = 512,
+                  lambda = 0). Every Phase 1 cell uses that lambda; E1.0c runs the other lambda as the check.
 """
 import argparse
 import os
@@ -130,48 +130,40 @@ def build(group: str, pr: dict, results_dir: str) -> List[dict]:
             runs.append(mqar_run(group, "phase1", "A1", 0, N, F, 64, "a", lam,
                                  extra=["phase=phase0", "train.steps=6000", "train.eval_every=250"]))
     elif group.startswith("E1"):
+        # One-week grid, option A (PREREG.md, 2026-10-20): N = N* only, placement a, P = 64, primary clutter F and
+        # filler-loss weight lambda from prereg.yaml (F = 512, lambda = 0); E1.0c checks the other lambda.
         Ns = need(pr, "N_star")
         steps = need(pr, "phase1_steps")
         pc = pr["primary_cell"]
         if pc.get("F") in (None, "", "null"):
-            sys.exit("configs/prereg.yaml: 'primary_cell.F' is not set yet (from the E0.7 clutter pilot, NB04)")
-        Fp = int(pc["F"])
-        cells_6 = [(N, 0, "a") for N in (Ns, 2 * Ns)] + [(N, Fp, pl) for N in (Ns, 2 * Ns) for pl in ("a", "b")]
-        if group == "E1.0a":
-            for arm in ("A1", "A2", "T1"):
+            sys.exit("configs/prereg.yaml: 'primary_cell.F' is not set yet")
+        Fp, P, pl, lam = int(pc["F"]), pc["P"], pc["placement"], float(pc["filler_weight"])
+        if group == "E1.0a":        # LR pilot at the primary cell
+            for arm in ("A1", "A2"):
                 for lr in pr["lr_candidates"]:
-                    runs.append(mqar_run(group, "phase1", arm, 0, Ns, Fp, 64, "a", 1.0, lr, steps))
+                    runs.append(mqar_run(group, "phase1", arm, 0, Ns, Fp, P, pl, lam, lr, steps))
             return runs
         lrs = resolve_lrs(pr, results_dir)
-        if group == "E1.0c":
+        if group == "E1.0c":        # filler-loss check: the other lambda at the primary cell
             for arm in ("A1", "A2"):
-                runs += [mqar_run(group, "phase1", arm, s, Ns, pc["F"], pc["P"], pc["placement"], 0.0, lrs[arm], steps)
-                         for s in seeds]
-        elif group == "E1.1":
-            cells = []
-            for N in (Ns, 2 * Ns):
-                cells.append((N, 0, 64, "a"))
-                cells += [(N, F, 64, pl) for F in DESIGN_F for pl in ("a", "b")]
-            cells += [(Ns, Fp, P, pl) for P in (8, 512) for pl in ("a", "b")]
-            for (N, F, P, pl) in cells:
-                runs += [mqar_run(group, "phase1", "A1", s, N, F, P, pl, 1.0, lrs["A1"], steps,
+                runs += [mqar_run(group, "phase1", arm, s, Ns, Fp, P, pl, 1.0 - lam, lrs[arm], steps) for s in seeds]
+        elif group == "E1.1":       # H1: A1 across the design's clutter levels
+            for F in (0,) + DESIGN_F:
+                runs += [mqar_run(group, "phase1", "A1", s, Ns, F, P, pl, lam, lrs["A1"], steps,
                                   extra=["train.save_final=true"]) for s in seeds]
-        elif group == "E1.2":
+        elif group == "E1.2":       # H2 + controls at F = 0 and the primary F; A2 dose-response at the other levels
             for arm in ("A2", "A3", "A4", "A5"):
-                for (N, F, pl) in cells_6:
-                    runs += [mqar_run(group, "phase1", arm, s, N, F, 64, pl, 1.0, lrs[arm], steps,
+                for F in (0, Fp):
+                    runs += [mqar_run(group, "phase1", arm, s, Ns, F, P, pl, lam, lrs[arm], steps,
                                       extra=["train.save_final=true"]) for s in seeds]
-            for F in [f for f in DESIGN_F if f != Fp]:      # A2 dose-response at the other design levels
-                runs += [mqar_run(group, "phase1", "A2", s, Ns, F, 64, "a", 1.0, lrs["A2"], steps,
+            for F in [f for f in DESIGN_F if f != Fp]:
+                runs += [mqar_run(group, "phase1", "A2", s, Ns, F, P, pl, lam, lrs["A2"], steps,
                                   extra=["train.save_final=true"]) for s in seeds]
-        elif group == "E1.2r":
-            runs += [mqar_run(group, "phase1", "T1", 0, N, F, 64, pl, 1.0, lrs["T1"], steps) for (N, F, pl) in cells_6]
-        elif group == "E1.2l":
-            runs += [mqar_run(group, "phase1", "A6", 0, 2 * Ns, Fp, 64, pl, 1.0, lrs["A6"], steps) for pl in ("a", "b")]
-        elif group == "E1.3":
+        elif group == "E1.2l":      # leak check under clutter: the Engram-only probe must stay at chance
+            runs.append(mqar_run(group, "phase1", "A6", 0, Ns, Fp, P, pl, lam, lrs["A6"], steps))
+        elif group == "E1.3":       # H4: conv ablations at the primary cell
             for arm in ("A2_noEconv", "A2_noGconv", "A2_noboth", "A1_noGconv"):
-                runs += [mqar_run(group, "phase1", arm, s, Ns, pc["F"], pc["P"], pc["placement"], 1.0, lrs[arm], steps)
-                         for s in seeds]
+                runs += [mqar_run(group, "phase1", arm, s, Ns, Fp, P, pl, lam, lrs[arm], steps) for s in seeds]
         else:
             sys.exit(f"unknown group {group}")
     elif group == "E2.0":      # throughput pilot
@@ -193,7 +185,7 @@ def build(group: str, pr: dict, results_dir: str) -> List[dict]:
 
 GROUP_SETS = {
     "all-phase0": ["E0.3", "E0.4", "E0.5", "E0.6", "E0.7"],
-    "all-phase1": ["E1.0a", "E1.0c", "E1.1", "E1.2", "E1.2r", "E1.2l", "E1.3"],
+    "all-phase1": ["E1.0a", "E1.0c", "E1.1", "E1.2", "E1.2l", "E1.3"],
     "all-phase2": ["E2.0", "E2.1", "E2.2"],
 }
 

@@ -566,3 +566,45 @@ Diff: `.changelog/entries/0020/diff.patch`
 **What the change does:** New 04_phase0_clutter_pilot notebook (no inputs; N* from prereg.yaml): runs the 4 E0.7 runs (~0.55 GPU-h), prints the pilot table and curves, saves figures/E0.7_clutter_pilot.png, applies the pre-registered primary-F rule and stops with an error if neither F=256 nor F=128 learns, then writes results/prereg.proposed.yaml (phase1_steps, primary_cell.F) and prints the Phase 1 budget from measured throughput. NB02's instructions point to NB04 when E0.6 did not learn. PREREG.md: new primary-F and step-budget rules, primary cell F = primary F, and a dated entry explaining the change. README lists NB04.
 
 Diff: `.changelog/entries/0021/diff.patch`
+
+---
+
+## [0022] Option A Phase 1 grid: 67 runs at N*=32, F=512, lambda=0, 6000 steps
+*2026-10-20 13:13:15*
+
+- **File:** `engramdelta/scripts/make_manifest.py` (modified, +24/-32)
+  - **Lines:** 18-19 modified (were 18-19 before); 133-134 added; 139-142 modified (were 137-141 before); 144 modified (were 143 before); 147 modified (were 146 before); 149-152 modified (were 148-157 before); 154 modified (were 159 before); 156-157 modified (were 161-162 before); 159-160 modified (were 164-165 before); 162-164 modified (were 167-171 before); 166 modified (were 173-174 before); 188 modified (were 196 before)
+- **File:** `engramdelta/analysis.py` (modified, +5/-4)
+  - **Lines:** 16 modified (were 16 before); 165-167 modified (were 165-166 before); 177 modified (were 176 before)
+- **File:** `engramdelta/scripts/make_plots.py` (modified, +1/-1)
+  - **Lines:** 107 modified (were 107 before)
+- **File:** `configs/prereg.yaml` (modified, +2/-3)
+  - **Lines:** 5 modified (were 5 before); 11 modified (were 11-12 before)
+- **File:** `tests/test_manifest.py` (modified, +32/-29)
+  - **Lines:** 1-4 modified (were 1 before); 7-9 modified (were 4-6 before); 12-17 modified (were 9-10 before); 23 modified (were 16 before); 30-43 modified (were 23-29 before); 49 modified (were 35-36 before); old 40 removed (after line 52); 58 modified (were 46 before); 65 modified (were 53-62 before); 67 modified (were 64 before)
+
+**Summary:** Option A Phase 1 grid: 67 runs at N*=32, F=512, lambda=0, 6000 steps
+
+**What the change does:** After the E0.7 pilot (lambda=1 never learns; lambda=0 learns at F=512) the human chose option A. make_manifest's Phase 1 groups now read F, P, placement and lambda from prereg primary_cell and use N* only, placement a: E1.0a = A1, A2 x 3 LRs (T1 dropped), E1.0c = A1, A2 at the other lambda (1), E1.1 = A1 x F in {0,128,256,512}, E1.2 = A2-A5 x F in {0,512} + A2 dose at 128/256, E1.2l = one A6 run, E1.3 unchanged in arms; E1.2r (T1) removed. prereg.yaml: phase1_steps 6000, primary_cell F 512 / filler_weight 0.0, lr only A1/A2. analysis: arms_table takes an optional lam filter, E1.2r dropped from the main groups, H1 label uses the primary F. Tests rewritten for the 67-run grid.
+
+Diff: `.changelog/entries/0022/diff.patch`
+
+---
+
+## [0023] Notebooks 10-14 for the option A grid; PREREG/DEVIATIONS record the decision
+*2026-10-20 13:13:15*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +76/-44)
+  - **Lines:** 648-649 modified (were 648-649 before); 651-652 modified (were 651 before); 654-656 modified (were 653-656 before); 658-660 modified (were 658-659 before); 662-665 modified (were 661-663 before); 670-675 modified (were 668-669 before); 680-681 modified (were 674-675 before); 683-684 modified (were 677-678 before); 686-693 modified (were 680-681 before); 695-697 modified (were 683-684 before); 699-703 modified (were 686-687 before); 708-709 modified (were 692-693 before); 711-722 modified (were 695-699 before); 724-725 modified (were 701-702 before); 730 modified (were 707 before); 735-736 modified (were 712-713 before); 738-748 modified (were 715-717 before); 750-751 modified (were 719-720 before); 756 modified (were 725 before); 768-769 modified (were 737 before); 794 modified (were 762 before)
+- **File:** `PREREG.md` (modified, +41/-14)
+  - **Lines:** 12-14 modified (were 12-13 before); 25-27 modified (were 24 before); 66-74 modified (were 63 before); 76 modified (were 65-67 before); 78-92 modified (were 69 before); 96-105 modified (were 73-78 before)
+- **File:** `DEVIATIONS.md` (modified, +3/-1)
+  - **Lines:** 32 modified (were 32 before); 41-42 added
+- **File:** `README.md` (modified, +4/-4)
+  - **Lines:** 54-57 modified (were 54-57 before)
+
+**Summary:** Notebooks 10-14 for the option A grid; PREREG/DEVIATIONS record the decision
+
+**What the change does:** NB10 = E1.0a only (A1, A2 LR pilot, ~1.4 GPU-h) and writes results/lrs.resolved.yaml; NB11 = E1.1 + E1.0c (~2.8 h), NB12 = E1.2 + E1.2l (~3.7 h), NB13 = E1.3 (~2.7 h); 11-13 are independent once the LRs are committed, so they can run in parallel. NB14 headings and inputs updated. PREREG.md: primary cell lambda=0, the 67-run grid table, filled Phase 0 outcomes, and a dated entry for the human's option-A decision with its known limitation. DEVIATIONS.md: D1 updated (primary lambda 0), new D10 (grid cuts) and D11 (primary cell). README table updated.
+
+Diff: `.changelog/entries/0023/diff.patch`

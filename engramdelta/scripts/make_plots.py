@@ -104,7 +104,7 @@ def arms(df, out):
                edgecolor=SURFACE, linewidth=1)
     ax.set_xticks(range(len(cells)))
     ax.set_xticklabels([f"N={n}\nF={f} {pl}" for n, f, pl in cells], fontsize=8)
-    style(ax, "Phase 1 arms: recall per cell (P=64, lambda=1)", "", "query recall")
+    style(ax, "Phase 1 arms: recall per cell (P=64)", "", "query recall")
     ax.legend(frameon=False, fontsize=8, loc="upper left", bbox_to_anchor=(1.0, 1.0))
     p = os.path.join(out, "E1.2_arms.png")
     fig.savefig(p, dpi=150, bbox_inches="tight")

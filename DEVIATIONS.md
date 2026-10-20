@@ -29,7 +29,7 @@ Design rule 1: every deviation from the reference implementations, or from ENGRA
 
 | # | Change | Reason |
 |---|--------|--------|
-| D1 | MQAR loss = mean CE(answers) + lambda * mean CE(next filler token). Primary lambda = 1, check cell lambda = 0 (E1.0c) | With answer-only loss, GDN can learn beta ≈ 0 on the disjoint filler vocabulary and H1 can fail for an uninteresting reason. The two terms are averaged separately, so the recall signal does not shrink as F grows |
+| D1 | MQAR loss = mean CE(answers) + lambda * mean CE(next filler token). Planned: primary lambda = 1, check lambda = 0. **Changed 2026-10-20 (option A): primary lambda = 0 (answer-only, the standard MQAR loss), check lambda = 1 (E1.0c)** | Planned lambda = 1 so that filler must be processed. The E0.7 pilot showed A1 cannot learn at all with lambda = 1 under any clutter level tried, but learns at F = 512 with lambda = 0 (PREREG.md). The two terms are averaged separately |
 | D2 | Added arm LA (vanilla causal linear attention, elu+1 feature map, normalized) for test 7 | The design's arm table has no linear-attention arm |
 | D3 | Phase 1 model d_model 128, 2 blocks, 4 heads x 32 (the low end of the design's 128-256) | One-week Kaggle budget (plan §6.5) |
 | D4 | MQAR vocabulary 2048 keys / 2048 values / 512 filler (chance 1/2048) | Smaller LM head, still far above what a table could memorize |
@@ -38,3 +38,5 @@ Design rule 1: every deviation from the reference implementations, or from ENGRA
 | D7 | Phase 2: one seed per arm, with T1 and T2 included (H3 testable at one seed) | One-week budget. Any write-up must say "single seed" |
 | D8 | Parameter matching: arms without Engram get their MLP width set so that non-embedding params match A2 within ±2%. Engram tables count as embedding params | Design §5.3 |
 | D9 | Logits are computed only at loss positions during training | Speed. The loss is identical |
+| D10 | Phase 1 grid (option A): N = N\* only (no 2N\*), placement a only (no interleaved clutter b), no P sweep, no T1 | One-week budget at 6,000 steps per run. A1 fails at 2N\* = 64 even without clutter; T1 fails at N = 32 without clutter (E0.4). Placement b (design §7.2) is untested this week |
+| D11 | Primary clutter cell F = 512 with lambda = 0, chosen after the E0.7 pilot | See D1 and PREREG.md |

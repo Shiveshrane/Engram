@@ -2902,6 +2902,402 @@
           "after_hash": "4f17fb4f1356"
         }
       ]
+    },
+    {
+      "id": "0022",
+      "time": "2026-10-20 13:13:15",
+      "summary": "Option A Phase 1 grid: 67 runs at N*=32, F=512, lambda=0, 6000 steps",
+      "explanation": "After the E0.7 pilot (lambda=1 never learns; lambda=0 learns at F=512) the human chose option A. make_manifest's Phase 1 groups now read F, P, placement and lambda from prereg primary_cell and use N* only, placement a: E1.0a = A1, A2 x 3 LRs (T1 dropped), E1.0c = A1, A2 at the other lambda (1), E1.1 = A1 x F in {0,128,256,512}, E1.2 = A2-A5 x F in {0,512} + A2 dose at 128/256, E1.2l = one A6 run, E1.3 unchanged in arms; E1.2r (T1) removed. prereg.yaml: phase1_steps 6000, primary_cell F 512 / filler_weight 0.0, lr only A1/A2. analysis: arms_table takes an optional lam filter, E1.2r dropped from the main groups, H1 label uses the primary F. Tests rewritten for the 67-run grid.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/make_manifest.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "18-19",
+              "old": "18-19"
+            },
+            {
+              "kind": "added",
+              "new": "133-134",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "139-142",
+              "old": "137-141"
+            },
+            {
+              "kind": "modified",
+              "new": "144",
+              "old": "143"
+            },
+            {
+              "kind": "modified",
+              "new": "147",
+              "old": "146"
+            },
+            {
+              "kind": "modified",
+              "new": "149-152",
+              "old": "148-157"
+            },
+            {
+              "kind": "modified",
+              "new": "154",
+              "old": "159"
+            },
+            {
+              "kind": "modified",
+              "new": "156-157",
+              "old": "161-162"
+            },
+            {
+              "kind": "modified",
+              "new": "159-160",
+              "old": "164-165"
+            },
+            {
+              "kind": "modified",
+              "new": "162-164",
+              "old": "167-171"
+            },
+            {
+              "kind": "modified",
+              "new": "166",
+              "old": "173-174"
+            },
+            {
+              "kind": "modified",
+              "new": "188",
+              "old": "196"
+            }
+          ],
+          "added": 24,
+          "removed": 32,
+          "before_existed": true,
+          "after_hash": "9407cbd93cde"
+        },
+        {
+          "path": "engramdelta/analysis.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "16",
+              "old": "16"
+            },
+            {
+              "kind": "modified",
+              "new": "165-167",
+              "old": "165-166"
+            },
+            {
+              "kind": "modified",
+              "new": "177",
+              "old": "176"
+            }
+          ],
+          "added": 5,
+          "removed": 4,
+          "before_existed": true,
+          "after_hash": "ab6ffcbcbc46"
+        },
+        {
+          "path": "engramdelta/scripts/make_plots.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "107",
+              "old": "107"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "4c2324c70355"
+        },
+        {
+          "path": "configs/prereg.yaml",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "5",
+              "old": "5"
+            },
+            {
+              "kind": "modified",
+              "new": "11",
+              "old": "11-12"
+            }
+          ],
+          "added": 2,
+          "removed": 3,
+          "before_existed": true,
+          "after_hash": "d6f5d18ea3e3"
+        },
+        {
+          "path": "tests/test_manifest.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "1-4",
+              "old": "1"
+            },
+            {
+              "kind": "modified",
+              "new": "7-9",
+              "old": "4-6"
+            },
+            {
+              "kind": "modified",
+              "new": "12-17",
+              "old": "9-10"
+            },
+            {
+              "kind": "modified",
+              "new": "23",
+              "old": "16"
+            },
+            {
+              "kind": "modified",
+              "new": "30-43",
+              "old": "23-29"
+            },
+            {
+              "kind": "modified",
+              "new": "49",
+              "old": "35-36"
+            },
+            {
+              "kind": "removed",
+              "new": "after 52",
+              "old": "40"
+            },
+            {
+              "kind": "modified",
+              "new": "58",
+              "old": "46"
+            },
+            {
+              "kind": "modified",
+              "new": "65",
+              "old": "53-62"
+            },
+            {
+              "kind": "modified",
+              "new": "67",
+              "old": "64"
+            }
+          ],
+          "added": 32,
+          "removed": 29,
+          "before_existed": true,
+          "after_hash": "7034b39bdf48"
+        }
+      ]
+    },
+    {
+      "id": "0023",
+      "time": "2026-10-20 13:13:15",
+      "summary": "Notebooks 10-14 for the option A grid; PREREG/DEVIATIONS record the decision",
+      "explanation": "NB10 = E1.0a only (A1, A2 LR pilot, ~1.4 GPU-h) and writes results/lrs.resolved.yaml; NB11 = E1.1 + E1.0c (~2.8 h), NB12 = E1.2 + E1.2l (~3.7 h), NB13 = E1.3 (~2.7 h); 11-13 are independent once the LRs are committed, so they can run in parallel. NB14 headings and inputs updated. PREREG.md: primary cell lambda=0, the 67-run grid table, filled Phase 0 outcomes, and a dated entry for the human's option-A decision with its known limitation. DEVIATIONS.md: D1 updated (primary lambda 0), new D10 (grid cuts) and D11 (primary cell). README table updated.",
+      "files": [
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "648-649",
+              "old": "648-649"
+            },
+            {
+              "kind": "modified",
+              "new": "651-652",
+              "old": "651"
+            },
+            {
+              "kind": "modified",
+              "new": "654-656",
+              "old": "653-656"
+            },
+            {
+              "kind": "modified",
+              "new": "658-660",
+              "old": "658-659"
+            },
+            {
+              "kind": "modified",
+              "new": "662-665",
+              "old": "661-663"
+            },
+            {
+              "kind": "modified",
+              "new": "670-675",
+              "old": "668-669"
+            },
+            {
+              "kind": "modified",
+              "new": "680-681",
+              "old": "674-675"
+            },
+            {
+              "kind": "modified",
+              "new": "683-684",
+              "old": "677-678"
+            },
+            {
+              "kind": "modified",
+              "new": "686-693",
+              "old": "680-681"
+            },
+            {
+              "kind": "modified",
+              "new": "695-697",
+              "old": "683-684"
+            },
+            {
+              "kind": "modified",
+              "new": "699-703",
+              "old": "686-687"
+            },
+            {
+              "kind": "modified",
+              "new": "708-709",
+              "old": "692-693"
+            },
+            {
+              "kind": "modified",
+              "new": "711-722",
+              "old": "695-699"
+            },
+            {
+              "kind": "modified",
+              "new": "724-725",
+              "old": "701-702"
+            },
+            {
+              "kind": "modified",
+              "new": "730",
+              "old": "707"
+            },
+            {
+              "kind": "modified",
+              "new": "735-736",
+              "old": "712-713"
+            },
+            {
+              "kind": "modified",
+              "new": "738-748",
+              "old": "715-717"
+            },
+            {
+              "kind": "modified",
+              "new": "750-751",
+              "old": "719-720"
+            },
+            {
+              "kind": "modified",
+              "new": "756",
+              "old": "725"
+            },
+            {
+              "kind": "modified",
+              "new": "768-769",
+              "old": "737"
+            },
+            {
+              "kind": "modified",
+              "new": "794",
+              "old": "762"
+            }
+          ],
+          "added": 76,
+          "removed": 44,
+          "before_existed": true,
+          "after_hash": "43c26bc8feeb"
+        },
+        {
+          "path": "PREREG.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "12-14",
+              "old": "12-13"
+            },
+            {
+              "kind": "modified",
+              "new": "25-27",
+              "old": "24"
+            },
+            {
+              "kind": "modified",
+              "new": "66-74",
+              "old": "63"
+            },
+            {
+              "kind": "modified",
+              "new": "76",
+              "old": "65-67"
+            },
+            {
+              "kind": "modified",
+              "new": "78-92",
+              "old": "69"
+            },
+            {
+              "kind": "modified",
+              "new": "96-105",
+              "old": "73-78"
+            }
+          ],
+          "added": 41,
+          "removed": 14,
+          "before_existed": true,
+          "after_hash": "78e815bd01b3"
+        },
+        {
+          "path": "DEVIATIONS.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "32",
+              "old": "32"
+            },
+            {
+              "kind": "added",
+              "new": "41-42",
+              "old": null
+            }
+          ],
+          "added": 3,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "0b0146bce970"
+        },
+        {
+          "path": "README.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "54-57",
+              "old": "54-57"
+            }
+          ],
+          "added": 4,
+          "removed": 4,
+          "before_existed": true,
+          "after_hash": "de9f3b66a213"
+        }
+      ]
     }
   ]
 }

@@ -51,10 +51,10 @@ python -m engramdelta.scripts.param_table --phase phase1
 | `02_phase0_known_result` | T4 x2 | 1.75 | E0.4 to E0.6. Proposes N\*, the step budget and the Phase 1 budget. **You fill `configs/prereg.yaml` and commit it** |
 | `04_phase0_clutter_pilot` | T4 x2 | 0.55 | E0.7: which clutter level A1 still learns at N\*. Sets the primary F and `phase1_steps` |
 | `03_lm_data_prep` | CPU | 0 | tokenizer + FineWeb-Edu shards. Publish the output as the Kaggle Dataset `engramdelta-lmdata` |
-| `10_phase1_pilot` | T4 x2 | 1.1 | E1.0a LR pilot, E1.0c lambda check |
-| `11_phase1_H1_grid` | T4 x2 | 4.1 | E1.1 |
-| `12_phase1_arms` | T4 x2 | 6.5 | E1.2, E1.2r, E1.2l |
-| `13_phase1_H4` | T4 x2 | 0.9 | E1.3 |
+| `10_phase1_pilot` | T4 x2 | 1.4 | E1.0a LR pilot (A1, A2). Its LRs go into `configs/prereg.yaml` |
+| `11_phase1_H1_grid` | T4 x2 | 2.8 | E1.1 (H1) + E1.0c (filler-loss check). 11, 12, 13 can run in parallel |
+| `12_phase1_arms` | T4 x2 | 3.7 | E1.2 (H2 + controls), E1.2l |
+| `13_phase1_H4` | T4 x2 | 2.7 | E1.3 (H4) |
 | `14_phase1_analysis` | CPU | 0 | tables, plots, state metrics, **Gate 1 table: your decision** |
 | `20_phase2_train` | T4 x2 | 9.5 | E2.0 to E2.2 (5 LM runs), resumable |
 | `21_phase2_eval` | T4 x2 | 0.75 | ppl, position buckets, in-context-copy loss, state occupancy |
