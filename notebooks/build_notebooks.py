@@ -835,12 +835,21 @@ NB["14_phase1_analysis"] = notebook([
 ], gpu=False)
 
 LMDATA_CELL = '''
-# Locate the Phase 2 data (output of notebook 03, attached as an input)
-cands = [p for p in ["/kaggle/input/engramdelta-lmdata"] + glob.glob("/kaggle/input/*/lmdata") + glob.glob("/kaggle/input/*")
-         if os.path.exists(os.path.join(p, "meta.json"))]
-assert cands, "Phase 2 data not found: attach the output of notebook 03 (Add Input -> Notebook Output)"
+# Locate the Phase 2 data (output of notebook 03, attached as an input): any folder up to 6 levels under
+# /kaggle/input that holds meta.json + train.bin + val.bin (Kaggle mounts inputs at different depths).
+def _find_lmdata(root="/kaggle/input", max_depth=6):
+    hits = []
+    for dirpath, dirnames, files in os.walk(root):
+        if dirpath[len(root):].count(os.sep) >= max_depth:
+            dirnames[:] = []
+        if {"meta.json", "train.bin", "val.bin"} <= set(files):
+            hits.append(dirpath)
+    return sorted(hits, key=len)
+cands = _find_lmdata()
+assert cands, "Phase 2 data not found: attach the output of notebook 03 (Add Input -> Your Work -> the NB03 notebook)"
 LMDATA = cands[0]
-print("LM data:", LMDATA); print(open(os.path.join(LMDATA, "meta.json")).read())
+print("LM data:", LMDATA, "(other candidates: %s)" % cands[1:] if len(cands) > 1 else "")
+print(open(os.path.join(LMDATA, "meta.json")).read())
 '''
 
 NB["20_phase2_train"] = notebook([

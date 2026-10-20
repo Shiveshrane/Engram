@@ -622,3 +622,17 @@ Diff: `.changelog/entries/0023/diff.patch`
 **What the change does:** PREREG.md now names commit 6ebba48 (2026-10-20) as the pre-registration commit: it fixes N_star=32, phase1_steps=6000 and the primary cell before any Phase 1 run. The LRs are added later by the pre-registered E1.0a rule.
 
 Diff: `.changelog/entries/0024/diff.patch`
+
+---
+
+## [0025] NB20/NB21: find the LM data at any mount depth under /kaggle/input
+*2026-10-20 13:13:58*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +14/-5)
+  - **Lines:** 838-849 modified (were 838-841 before); 851-852 modified (were 843 before)
+
+**Summary:** NB20/NB21: find the LM data at any mount depth under /kaggle/input
+
+**What the change does:** LMDATA_CELL only looked at /kaggle/input/engramdelta-lmdata, /kaggle/input/*/lmdata and /kaggle/input/*. Kaggle now mounts attached outputs deeper (e.g. /kaggle/input/datasets/<user>/<slug>/...), so the data would not be found. The cell now walks up to 6 levels under /kaggle/input for a folder holding meta.json, train.bin and val.bin, takes the shallowest, and prints any other candidates.
+
+Diff: `.changelog/entries/0025/diff.patch`

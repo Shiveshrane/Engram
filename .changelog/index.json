@@ -3321,6 +3321,34 @@
           "after_hash": "c56e026a80e6"
         }
       ]
+    },
+    {
+      "id": "0025",
+      "time": "2026-10-20 13:13:58",
+      "summary": "NB20/NB21: find the LM data at any mount depth under /kaggle/input",
+      "explanation": "LMDATA_CELL only looked at /kaggle/input/engramdelta-lmdata, /kaggle/input/*/lmdata and /kaggle/input/*. Kaggle now mounts attached outputs deeper (e.g. /kaggle/input/datasets/<user>/<slug>/...), so the data would not be found. The cell now walks up to 6 levels under /kaggle/input for a folder holding meta.json, train.bin and val.bin, takes the shallowest, and prints any other candidates.",
+      "files": [
+        {
+          "path": "notebooks/build_notebooks.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "838-849",
+              "old": "838-841"
+            },
+            {
+              "kind": "modified",
+              "new": "851-852",
+              "old": "843"
+            }
+          ],
+          "added": 14,
+          "removed": 5,
+          "before_existed": true,
+          "after_hash": "f25462e07792"
+        }
+      ]
     }
   ]
 }
