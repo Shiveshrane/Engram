@@ -3349,6 +3349,44 @@
           "after_hash": "f25462e07792"
         }
       ]
+    },
+    {
+      "id": "0026",
+      "time": "2026-10-20 15:42:50",
+      "summary": "Pre-registered LRs from the E1.0a pilot: A1 1e-3, A2 3e-3",
+      "explanation": "NB10 (E1.0a, code 1997b4d) resolved the LRs by the pre-registered rule (best val recall, ties to the smaller LR): A1 1e-3 (val recall 0.018/0.659/0.282 at 3e-4/1e-3/3e-3), A2 3e-3 (0.001/0.002/0.068). prereg.yaml now holds them as numbers, so notebooks 11-13 need no inputs; inherited arms follow LR_INHERIT. PREREG.md Phase 0 outcomes gains an LR row noting that A2's best is the largest candidate.",
+      "files": [
+        {
+          "path": "configs/prereg.yaml",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "8-10",
+              "old": "8-10"
+            }
+          ],
+          "added": 3,
+          "removed": 3,
+          "before_existed": true,
+          "after_hash": "e185757d9497"
+        },
+        {
+          "path": "PREREG.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "106",
+              "old": null
+            }
+          ],
+          "added": 1,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "bbaa2d4ebb2f"
+        }
+      ]
     }
   ]
 }

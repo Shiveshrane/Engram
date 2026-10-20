@@ -103,3 +103,4 @@ added back is 2 extra seeds of A1–A4 at the primary cell.
 | Phase 1 step budget | 6,000 (E0.7, A1 at F = 512, lambda = 0: 98% of max at 5,750) |
 | Measured Phase 1 run time (min) | 12.1 train min for A1 at F = 512 (T = 640), 6,000 steps |
 | Phase 1 budget estimate (GPU-h) | 10.5 (67 runs) |
+| LRs (E1.0a, NB10, code 1997b4d) | A1 1e-3 (val recall 0.659), A2 3e-3 (0.068; best of the three is the largest candidate). A3/A4/A2_* use A2's, A5/A6/A1_noGconv use A1's |

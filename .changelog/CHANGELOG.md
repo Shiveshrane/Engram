@@ -636,3 +636,19 @@ Diff: `.changelog/entries/0024/diff.patch`
 **What the change does:** LMDATA_CELL only looked at /kaggle/input/engramdelta-lmdata, /kaggle/input/*/lmdata and /kaggle/input/*. Kaggle now mounts attached outputs deeper (e.g. /kaggle/input/datasets/<user>/<slug>/...), so the data would not be found. The cell now walks up to 6 levels under /kaggle/input for a folder holding meta.json, train.bin and val.bin, takes the shallowest, and prints any other candidates.
 
 Diff: `.changelog/entries/0025/diff.patch`
+
+---
+
+## [0026] Pre-registered LRs from the E1.0a pilot: A1 1e-3, A2 3e-3
+*2026-10-20 15:42:50*
+
+- **File:** `configs/prereg.yaml` (modified, +3/-3)
+  - **Lines:** 8-10 modified (were 8-10 before)
+- **File:** `PREREG.md` (modified, +1/-0)
+  - **Lines:** 106 added
+
+**Summary:** Pre-registered LRs from the E1.0a pilot: A1 1e-3, A2 3e-3
+
+**What the change does:** NB10 (E1.0a, code 1997b4d) resolved the LRs by the pre-registered rule (best val recall, ties to the smaller LR): A1 1e-3 (val recall 0.018/0.659/0.282 at 3e-4/1e-3/3e-3), A2 3e-3 (0.001/0.002/0.068). prereg.yaml now holds them as numbers, so notebooks 11-13 need no inputs; inherited arms follow LR_INHERIT. PREREG.md Phase 0 outcomes gains an LR row noting that A2's best is the largest candidate.
+
+Diff: `.changelog/entries/0026/diff.patch`
