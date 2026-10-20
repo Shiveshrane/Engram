@@ -3298,6 +3298,29 @@
           "after_hash": "de9f3b66a213"
         }
       ]
+    },
+    {
+      "id": "0024",
+      "time": "2026-10-20 13:13:17",
+      "summary": "Record the pre-registration commit hash",
+      "explanation": "PREREG.md now names commit 6ebba48 (2026-10-20) as the pre-registration commit: it fixes N_star=32, phase1_steps=6000 and the primary cell before any Phase 1 run. The LRs are added later by the pre-registered E1.0a rule.",
+      "files": [
+        {
+          "path": "PREREG.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "6",
+              "old": "6"
+            }
+          ],
+          "added": 1,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "c56e026a80e6"
+        }
+      ]
     }
   ]
 }

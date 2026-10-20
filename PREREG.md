@@ -3,7 +3,7 @@
 Fill in the **Phase 0 outcomes** section and `configs/prereg.yaml` after NB02, **commit both before any Phase 1
 run**, and write the commit hash below. Everything else on this page is fixed now, before any results exist.
 
-- Pre-registration commit: `__________` (date: ______)
+- Pre-registration commit: `6ebba48` (date: 2026-10-20). LRs from NB10 (E1.0a) are added by rule in a later commit.
 
 ## Decision rules (fixed)
 

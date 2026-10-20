@@ -608,3 +608,17 @@ Diff: `.changelog/entries/0022/diff.patch`
 **What the change does:** NB10 = E1.0a only (A1, A2 LR pilot, ~1.4 GPU-h) and writes results/lrs.resolved.yaml; NB11 = E1.1 + E1.0c (~2.8 h), NB12 = E1.2 + E1.2l (~3.7 h), NB13 = E1.3 (~2.7 h); 11-13 are independent once the LRs are committed, so they can run in parallel. NB14 headings and inputs updated. PREREG.md: primary cell lambda=0, the 67-run grid table, filled Phase 0 outcomes, and a dated entry for the human's option-A decision with its known limitation. DEVIATIONS.md: D1 updated (primary lambda 0), new D10 (grid cuts) and D11 (primary cell). README table updated.
 
 Diff: `.changelog/entries/0023/diff.patch`
+
+---
+
+## [0024] Record the pre-registration commit hash
+*2026-10-20 13:13:17*
+
+- **File:** `PREREG.md` (modified, +1/-1)
+  - **Lines:** 6 modified (were 6 before)
+
+**Summary:** Record the pre-registration commit hash
+
+**What the change does:** PREREG.md now names commit 6ebba48 (2026-10-20) as the pre-registration commit: it fixes N_star=32, phase1_steps=6000 and the primary cell before any Phase 1 run. The LRs are added later by the pre-registered E1.0a rule.
+
+Diff: `.changelog/entries/0024/diff.patch`
