@@ -826,3 +826,47 @@ Diff: `.changelog/entries/0036/diff.patch`
 **What the change does:** modal_app.py gains a run_facts function (L4, 4 CPU, 8 GiB) sharing the run body _run with the Phase 2 A100 run_one, and a facts entrypoint: it builds the E3.1+E3.2 manifests (41 runs), runs a 300-step A1/A2 pilot in group E3.bench to measure sec/step (saved to results/Modal-phase2/facts_timing.json), projects the cost with a 1.25 eval margin, refuses above --max-dollars (default 8), launches all pending runs in parallel and prints facts_summary/facts_tests. Training settings stay Phase 1's (fp16, torch backend, global batch 64). DEVIATIONS.md D14 records the hardware change from Kaggle NB30/NB31; README documents the command.
 
 Diff: `.changelog/entries/0037/diff.patch`
+
+---
+
+## [0038] Add follow-up studies E2.ngram (loss by n-gram training count) and E2.long (2x steps) on Modal
+*2026-11-15 01:23:07*
+
+- **File:** `engramdelta/scripts/ngram_counts.py` (created, +65/-0)
+  - **Lines:** 1-65 added
+- **File:** `engramdelta/eval/lm_eval.py` (modified, +50/-0)
+  - **Lines:** 75-124 added
+- **File:** `engramdelta/scripts/eval_lm.py` (modified, +21/-13)
+  - **Lines:** 25-43 added; 62-63 modified (were 43-49 before); old 51-56 removed (after line 64)
+- **File:** `engramdelta/scripts/eval_ngram.py` (created, +65/-0)
+  - **Lines:** 1-65 added
+- **File:** `engramdelta/analysis.py` (modified, +48/-1)
+  - **Lines:** 220-221 modified (were 220 before); 224-225 added; 308-351 added
+- **File:** `modal_app.py` (modified, +140/-1)
+  - **Lines:** 14-17 added; 148-160 added; 348 modified (were 331 before); 446-567 added
+- **File:** `tests/test_ngram_eval.py` (created, +54/-0)
+  - **Lines:** 1-54 added
+
+**Summary:** Add follow-up studies E2.ngram (loss by n-gram training count) and E2.long (2x steps) on Modal
+
+**What the change does:** ngram_counts.py counts, over train.bin in Engram's canonical ids, the bigram/trigram ending at every val token and saves val_ngram_counts.npz. lm_eval.evaluate_lm_ngram splits per-token val loss at positions p>=2 into count buckets 0/1-9/10-99/100-999/>=1000 (evaluate_lm unchanged). eval_ngram.py writes results/phase2/E2.ngram/<run>.json; eval_lm.py's checkpoint loading moved into load_run_model so both scripts share it. analysis gains ngram_table/summary/tests, and phase2_table now filters by source_group (default E2.1/E2.2) so E2.long evals don't mix in. modal_app adds eval_ngram_one (L4), an ngram entrypoint and a long entrypoint (A1/A2 seed 0 at 2x E2.1 steps, cost cap, then E2.eval + E2.ngram and a gap table). Tests check counts against brute force and bucket totals against the overall loss.
+
+Diff: `.changelog/entries/0038/diff.patch`
+
+---
+
+## [0039] Record E3 outcome; pre-register E2.ngram and E2.long (D15)
+*2026-11-15 01:23:07*
+
+- **File:** `PREREG.md` (modified, +44/-0)
+  - **Lines:** 165-208 added
+- **File:** `DEVIATIONS.md` (modified, +1/-0)
+  - **Lines:** 46 added
+- **File:** `README.md` (modified, +3/-0)
+  - **Lines:** 90-92 added
+
+**Summary:** Record E3 outcome; pre-register E2.ngram and E2.long (D15)
+
+**What the change does:** PREREG.md gets the E3 outcome table (H5a and H5 not supported, leak check passes, table arms escape later) and the rules for E2.ngram (buckets, comparisons, reading) and E2.long (A1/A2 seed 0 at 4,576 steps, closes/shrinks/persists criteria), written before any run. DEVIATIONS.md D15 and a README note on the two new commands.
+
+Diff: `.changelog/entries/0039/diff.patch`

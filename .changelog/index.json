@@ -3975,6 +3975,207 @@
           "after_hash": "8e2314d2fd33"
         }
       ]
+    },
+    {
+      "id": "0038",
+      "time": "2026-11-15 01:23:07",
+      "summary": "Add follow-up studies E2.ngram (loss by n-gram training count) and E2.long (2x steps) on Modal",
+      "explanation": "ngram_counts.py counts, over train.bin in Engram's canonical ids, the bigram/trigram ending at every val token and saves val_ngram_counts.npz. lm_eval.evaluate_lm_ngram splits per-token val loss at positions p>=2 into count buckets 0/1-9/10-99/100-999/>=1000 (evaluate_lm unchanged). eval_ngram.py writes results/phase2/E2.ngram/<run>.json; eval_lm.py's checkpoint loading moved into load_run_model so both scripts share it. analysis gains ngram_table/summary/tests, and phase2_table now filters by source_group (default E2.1/E2.2) so E2.long evals don't mix in. modal_app adds eval_ngram_one (L4), an ngram entrypoint and a long entrypoint (A1/A2 seed 0 at 2x E2.1 steps, cost cap, then E2.eval + E2.ngram and a gap table). Tests check counts against brute force and bucket totals against the overall loss.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/ngram_counts.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-65",
+              "old": null
+            }
+          ],
+          "added": 65,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "793291d9d941"
+        },
+        {
+          "path": "engramdelta/eval/lm_eval.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "75-124",
+              "old": null
+            }
+          ],
+          "added": 50,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "22cef143cfe4"
+        },
+        {
+          "path": "engramdelta/scripts/eval_lm.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "25-43",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "62-63",
+              "old": "43-49"
+            },
+            {
+              "kind": "removed",
+              "new": "after 64",
+              "old": "51-56"
+            }
+          ],
+          "added": 21,
+          "removed": 13,
+          "before_existed": true,
+          "after_hash": "34060b90f90d"
+        },
+        {
+          "path": "engramdelta/scripts/eval_ngram.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-65",
+              "old": null
+            }
+          ],
+          "added": 65,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "7fe4ff7865c5"
+        },
+        {
+          "path": "engramdelta/analysis.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "modified",
+              "new": "220-221",
+              "old": "220"
+            },
+            {
+              "kind": "added",
+              "new": "224-225",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "308-351",
+              "old": null
+            }
+          ],
+          "added": 48,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "92b197509114"
+        },
+        {
+          "path": "modal_app.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "14-17",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "148-160",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "348",
+              "old": "331"
+            },
+            {
+              "kind": "added",
+              "new": "446-567",
+              "old": null
+            }
+          ],
+          "added": 140,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "efc37b19ceae"
+        },
+        {
+          "path": "tests/test_ngram_eval.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-54",
+              "old": null
+            }
+          ],
+          "added": 54,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "6db9719655b7"
+        }
+      ]
+    },
+    {
+      "id": "0039",
+      "time": "2026-11-15 01:23:07",
+      "summary": "Record E3 outcome; pre-register E2.ngram and E2.long (D15)",
+      "explanation": "PREREG.md gets the E3 outcome table (H5a and H5 not supported, leak check passes, table arms escape later) and the rules for E2.ngram (buckets, comparisons, reading) and E2.long (A1/A2 seed 0 at 4,576 steps, closes/shrinks/persists criteria), written before any run. DEVIATIONS.md D15 and a README note on the two new commands.",
+      "files": [
+        {
+          "path": "PREREG.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "165-208",
+              "old": null
+            }
+          ],
+          "added": 44,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "3e3316771dce"
+        },
+        {
+          "path": "DEVIATIONS.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "46",
+              "old": null
+            }
+          ],
+          "added": 1,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "f729c17fd990"
+        },
+        {
+          "path": "README.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "90-92",
+              "old": null
+            }
+          ],
+          "added": 3,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "b3cc10c22ab8"
+        }
+      ]
     }
   ]
 }
