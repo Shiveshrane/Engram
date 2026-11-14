@@ -3836,6 +3836,49 @@
           "after_hash": "8f24d21d7025"
         }
       ]
+    },
+    {
+      "id": "0035",
+      "time": "2026-11-14 19:31:39",
+      "summary": "Fix Phase 2 crash: load the Engram compression lookup for parameter-matched arms",
+      "explanation": "setup_task() loaded engram_compress.npy only when the run's own Engram used it. Arms without Engram that are parameter-matched to A2 (A1, A5, T1, T2 via match_nonembed_of) build A2's model to count its parameters, which asserted 'engram.compress=True needs the tokenizer compression lookup' (seen in the first Modal E2.0 pilot of A1). The lookup is now also loaded when match_nonembed_of is set. test_phase2_setup.py builds every Phase 2 arm from a fake LM data folder and checks non-embedding params match A2 within 2%.",
+      "files": [
+        {
+          "path": "engramdelta/scripts/train.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "109",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "111-112",
+              "old": "110"
+            }
+          ],
+          "added": 3,
+          "removed": 1,
+          "before_existed": true,
+          "after_hash": "97ef050358b2"
+        },
+        {
+          "path": "tests/test_phase2_setup.py",
+          "status": "created",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "1-38",
+              "old": null
+            }
+          ],
+          "added": 38,
+          "removed": 0,
+          "before_existed": false,
+          "after_hash": "492d5372cf8e"
+        }
+      ]
     }
   ]
 }

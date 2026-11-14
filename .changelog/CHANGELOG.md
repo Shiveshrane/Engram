@@ -778,3 +778,19 @@ Diff: `.changelog/entries/0033/diff.patch`
 **What the change does:** PREREG.md: Phase 1 outcomes table (H1 holds, H2 not supported, H4, leak, Gate 1 fails) and the rules for the exploratory follow-ups fixed before any run: Phase 2 on Modal (A1/A2/A3 x 3 seeds, bf16) and study E3 (facts + in-context recall, H5a / H5, 2-sigma n = 5, leak probe). DEVIATIONS D12 (Phase 2 on Modal, 3 seeds) and D13 (study E3). README documents notebooks 30/31 and the Modal commands. .gitignore excludes results/lmdata/.
 
 Diff: `.changelog/entries/0034/diff.patch`
+
+---
+
+## [0035] Fix Phase 2 crash: load the Engram compression lookup for parameter-matched arms
+*2026-11-14 19:31:39*
+
+- **File:** `engramdelta/scripts/train.py` (modified, +3/-1)
+  - **Lines:** 109 added; 111-112 modified (were 110 before)
+- **File:** `tests/test_phase2_setup.py` (created, +38/-0)
+  - **Lines:** 1-38 added
+
+**Summary:** Fix Phase 2 crash: load the Engram compression lookup for parameter-matched arms
+
+**What the change does:** setup_task() loaded engram_compress.npy only when the run's own Engram used it. Arms without Engram that are parameter-matched to A2 (A1, A5, T1, T2 via match_nonembed_of) build A2's model to count its parameters, which asserted 'engram.compress=True needs the tokenizer compression lookup' (seen in the first Modal E2.0 pilot of A1). The lookup is now also loaded when match_nonembed_of is set. test_phase2_setup.py builds every Phase 2 arm from a fake LM data folder and checks non-embedding params match A2 within 2%.
+
+Diff: `.changelog/entries/0035/diff.patch`

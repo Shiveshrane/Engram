@@ -106,8 +106,10 @@ def setup_task(cfg: dict):
     if cfg["task"] == "lm":
         train = LMData(d["path"], d["seq_len"], "train")
         val = LMData(d["path"], d["seq_len"], "val")
+        # Also needed by arms without Engram: parameter matching (match_nonembed_of) builds the Engram arm's model.
         compress = None
-        if cfg["model"]["engram"]["enabled"] and cfg["model"]["engram"]["compress"]:
+        uses_engram = cfg["model"]["engram"]["enabled"] or cfg["model"].get("match_nonembed_of")
+        if uses_engram and cfg["model"]["engram"]["compress"]:
             compress = np.load(os.path.join(d["path"], "engram_compress.npy"))
         return {"vocab": train.vocab_size, "compress": compress, "seq_len": d["seq_len"], "train": train,
                 "val": val, "pad_id": int(train.meta["eos_id"])}
