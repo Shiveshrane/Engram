@@ -794,3 +794,17 @@ Diff: `.changelog/entries/0034/diff.patch`
 **What the change does:** setup_task() loaded engram_compress.npy only when the run's own Engram used it. Arms without Engram that are parameter-matched to A2 (A1, A5, T1, T2 via match_nonembed_of) build A2's model to count its parameters, which asserted 'engram.compress=True needs the tokenizer compression lookup' (seen in the first Modal E2.0 pilot of A1). The lookup is now also loaded when match_nonembed_of is set. test_phase2_setup.py builds every Phase 2 arm from a fake LM data folder and checks non-embedding params match A2 within 2%.
 
 Diff: `.changelog/entries/0035/diff.patch`
+
+---
+
+## [0036] Record the Phase 2 outcome (Modal, 3 seeds)
+*2026-11-14 20:26:26*
+
+- **File:** `PREREG.md` (modified, +12/-0)
+  - **Lines:** 153-164 added
+
+**Summary:** Record the Phase 2 outcome (Modal, 3 seeds)
+
+**What the change does:** Adds the exploratory Phase 2 results table (full val set, 3 seeds): A2 and A3 are worse than A1 by more than 2 sigma on every loss bucket including the in-context-copy loss; A3 ~ A2; Engram arms have fuller GDN states. Records the Modal cost.
+
+Diff: `.changelog/entries/0036/diff.patch`

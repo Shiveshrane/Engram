@@ -150,3 +150,15 @@ protect in-context recall by taking over the memorization?
 - Secondary, descriptive: fact recall; escape step (first eval step with in-context val recall ≥ 0.5) and the number
   of seeds that escape within 6,000 steps.
 - Leak: A6 in-context recall < 1% at facts on (its fact recall is expected to be high, and is reported).
+
+### Phase 2 outcome (exploratory; Modal A100, code 7c5a332, 150M tokens per run, full val set, 3 seeds)
+
+| Arm | val loss | ppl | [0, 64) | [64, 256) | [256, 1024) | in-context copy |
+|---|---|---|---|---|---|---|
+| A1 | 3.812 | 45.2 | 4.156 | 3.840 | 3.776 | 3.635 |
+| A2 | 3.847 | 46.8 | 4.185 | 3.875 | 3.811 | 3.674 |
+| A3 | 3.845 | 46.8 | 4.184 | 3.874 | 3.810 | 3.674 |
+
+A2 − A1 exceeds 2σ on every loss, in the direction of A2 being **worse** (+0.035 nats overall, +0.039 on the
+in-context-copy loss). A3 ≈ A2. Descriptively, the GDN states of A2 / A3 have higher effective rank and Frobenius
+norm than A1's at positions 256 / 512 / 1023 (e.g. eff. rank 18.1 vs 15.7 at 1023). Cost: ~$12.5 of Modal credit.

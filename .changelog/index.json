@@ -3879,6 +3879,29 @@
           "after_hash": "492d5372cf8e"
         }
       ]
+    },
+    {
+      "id": "0036",
+      "time": "2026-11-14 20:26:26",
+      "summary": "Record the Phase 2 outcome (Modal, 3 seeds)",
+      "explanation": "Adds the exploratory Phase 2 results table (full val set, 3 seeds): A2 and A3 are worse than A1 by more than 2 sigma on every loss bucket including the in-context-copy loss; A3 ~ A2; Engram arms have fuller GDN states. Records the Modal cost.",
+      "files": [
+        {
+          "path": "PREREG.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "153-164",
+              "old": null
+            }
+          ],
+          "added": 12,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "9e43aacad679"
+        }
+      ]
     }
   ]
 }
