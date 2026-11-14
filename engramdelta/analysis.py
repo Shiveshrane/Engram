@@ -217,9 +217,12 @@ def lr_pilot_table(df: pd.DataFrame) -> pd.DataFrame:
 
 # ---------------- Phase 2 ----------------
 
-def phase2_table(results_dir: str = "results") -> pd.DataFrame:
+def phase2_table(results_dir: str = "results", source_groups=("E2.1", "E2.2")) -> pd.DataFrame:
+    """E2.eval records of runs from source_groups (E2.long has its own table: pass source_groups=("E2.long",))."""
     rows = []
     for r in read_results(os.path.join(results_dir, "phase2", "E2.eval")):
+        if r.get("source_group", "E2.1") not in source_groups:
+            continue
         m = r["metrics"]
         rows.append({"run_id": r["run_id"], "arm": r["arm"], "seed": r["seed"], "ppl": m["ppl"],
                      "loss_all": m["loss_all"], "loss_pos_0_64": m["loss_pos_0_64"],
@@ -301,4 +304,48 @@ def facts_tests(t: pd.DataFrame) -> pd.DataFrame:
     for other in ("A1", "A3", "A4"):
         rows.append({"test": f"H5: A2 vs {other}, facts on", **compare(sel("A2", "on"), sel(other, "on"), "A2", other)})
     rows.append({"test": "context: A2 vs A1, facts off", **compare(sel("A2", "off"), sel("A1", "off"), "A2", "A1")})
+    return pd.DataFrame(rows)
+
+
+# ------------------------------------------------------------------------------------------------
+# Study E2.ngram (PREREG.md): loss by the training-set count of the n-gram Engram looks up. Descriptive.
+# ------------------------------------------------------------------------------------------------
+
+def ngram_table(results_dir: str = "results", source_groups=("E2.1",)) -> pd.DataFrame:
+    """Long format: one row per (run, n-gram order, count bucket)."""
+    from .eval.lm_eval import NGRAM_LABELS
+    rows = []
+    for r in read_results(os.path.join(results_dir, "phase2", "E2.ngram")):
+        if r.get("source_group") not in source_groups:
+            continue
+        m = r["metrics"]
+        for order in ("trigram", "bigram"):
+            for b in NGRAM_LABELS:
+                rows.append({"run_id": r["run_id"], "source_group": r["source_group"], "arm": r["arm"],
+                             "seed": r["seed"], "order": order, "bucket": b, "loss": m[f"loss_{order}_{b}"],
+                             "tokens": m[f"tokens_{order}_{b}"], "loss_all_p2": m["loss_all_p2"]})
+    return pd.DataFrame(rows)
+
+
+def ngram_summary(t: pd.DataFrame) -> pd.DataFrame:
+    """Mean loss per (order, bucket) and arm, the share of val tokens in the bucket, and A2 - A1 / A3 - A1."""
+    from .eval.lm_eval import NGRAM_LABELS
+    w = t.pivot_table(index=["order", "bucket"], columns="arm", values="loss", aggfunc="mean")
+    tok = t.groupby(["order", "bucket"])["tokens"].first()
+    w["token_share"] = tok / t.groupby(["order", "bucket"])["tokens"].first().groupby(level=0).transform("sum")
+    for arm in ("A2", "A3"):
+        if arm in w and "A1" in w:
+            w[f"{arm}_minus_A1"] = w[arm] - w["A1"]
+    w = w.reset_index()
+    w["bucket"] = pd.Categorical(w["bucket"], NGRAM_LABELS, ordered=True)
+    return w.sort_values(["order", "bucket"]).reset_index(drop=True)
+
+
+def ngram_tests(t: pd.DataFrame) -> pd.DataFrame:
+    """A2 vs A1 and A3 vs A1 per (order, bucket) with the 2-sigma rule over seeds."""
+    rows = []
+    for (order, bucket), g in t.groupby(["order", "bucket"], sort=False):
+        for arm in ("A2", "A3"):
+            c = compare(g.loc[g["arm"] == arm, "loss"], g.loc[g["arm"] == "A1", "loss"], arm, "A1")
+            rows.append({"order": order, "bucket": bucket, **c})
     return pd.DataFrame(rows)

@@ -87,6 +87,9 @@ modal run modal_app.py::evaluate              # E2.eval in parallel + Phase 2 ta
 
 Results and every run's log land in `results/Modal-phase2/` (`run.log` = what the commands printed).
 
+Follow-ups (PREREG.md, D15): `modal run modal_app.py::ngram` (E2.ngram, ~$0.2) and `modal run modal_app.py::long`
+(E2.long, A1/A2 at 2× steps, ~$5.6, cap $7).
+
 Study E3 (the NB30 + NB31 runs) can run there too, one L4 per run, no upload needed (~$5, DEVIATIONS.md D14):
 
 ```bash

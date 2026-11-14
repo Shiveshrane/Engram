@@ -72,3 +72,53 @@ def evaluate_lm(model, data, device, batch_size: int = 4, max_windows: int = Non
         out[f"tokens_{n}"] = int(count)
     out["ppl"] = float(np.exp(out["loss_all"]))
     return out
+
+
+# ------------------------------------------------------------------------------------------------
+# Study E2.ngram (PREREG.md): loss split by the training-set count of the n-gram Engram looks up.
+# ------------------------------------------------------------------------------------------------
+
+NGRAM_EDGES = (1, 10, 100, 1000)           # buckets: 0, 1-9, 10-99, 100-999, >= 1000
+NGRAM_LABELS = ("0", "1_9", "10_99", "100_999", "1000_plus")
+NGRAM_MIN_POS = 2                           # the trigram ending at p stays inside the window
+
+
+@torch.no_grad()
+def evaluate_lm_ngram(model, data, device, counts: Dict[str, np.ndarray], batch_size: int = 4,
+                      max_windows: int = None, amp_dtype=None) -> Dict:
+    """counts[name]: train count of the n-gram ending at each val.bin token (scripts/ngram_counts.py).
+    For each name, per-token cross-entropy at input positions p >= NGRAM_MIN_POS is summed per count bucket.
+    Returns loss_<name>_<bucket> and tokens_<name>_<bucket>, plus loss_all_p2 (all positions p >= 2)."""
+    was_training = model.training
+    model.eval()
+    rank, world = dist.rank(), dist.world_size()
+    names = sorted(counts)
+    nb = len(NGRAM_EDGES) + 1
+    sums = torch.zeros(len(names), 2, nb, dtype=torch.float32 if device.type == "mps" else torch.float64, device=device)
+    tot = torch.zeros(2, dtype=sums.dtype, device=device)
+    edges = np.asarray(NGRAM_EDGES)
+    L = data.seq_len
+    ctx = torch.autocast(device_type=device.type, dtype=amp_dtype) if amp_dtype is not None else nullcontext()
+    for batch in data.eval_batches(batch_size, rank, world, max_windows):
+        ids, tgt = batch["ids"].to(device), batch["targets"].to(device)
+        with ctx:
+            logits = model(ids)
+        ce = F.cross_entropy(logits.float().flatten(0, 1), tgt.flatten(), reduction="none").view(tgt.shape)
+        ce = ce[:, NGRAM_MIN_POS:].to(sums.dtype).flatten()
+        tok = (batch["window_idx"].numpy()[:, None] * L + np.arange(NGRAM_MIN_POS, ids.shape[1])[None, :]).ravel()
+        tot[0] += ce.sum()
+        tot[1] += ce.numel()
+        for i, n in enumerate(names):
+            b = torch.from_numpy(np.digitize(counts[n][tok], edges)).to(device)
+            sums[i, 0].index_add_(0, b, ce)
+            sums[i, 1].index_add_(0, b, torch.ones_like(ce))
+    dist.all_reduce_sum(sums)
+    dist.all_reduce_sum(tot)
+    model.train(was_training)
+    out = {"loss_all_p2": (tot[0] / tot[1]).item(), "tokens_all_p2": int(tot[1].item())}
+    for i, n in enumerate(names):
+        for k, lab in enumerate(NGRAM_LABELS):
+            c = sums[i, 1, k].item()
+            out[f"loss_{n}_{lab}"] = sums[i, 0, k].item() / c if c else None
+            out[f"tokens_{n}_{lab}"] = int(c)
+    return out

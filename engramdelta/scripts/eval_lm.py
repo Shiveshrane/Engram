@@ -22,6 +22,25 @@ from ..utils import dist, hub_sync
 from ..utils.run_log import env_info, git_commit, now, read_results, result_path, write_result
 
 
+def load_run_model(r: dict, ckpt_dir: str, data_path, device):
+    """The run's final.pt model (from the hub if missing locally) and its data path; (None, None) if no checkpoint."""
+    ck = os.path.join(ckpt_dir, r["run_id"], "final.pt")
+    if not os.path.exists(ck) and dist.is_main():
+        hub_sync.download_file(f"ckpt/{r['run_id']}/final.pt", ck)
+    dist.barrier()
+    if not os.path.exists(ck):
+        if dist.is_main():
+            print(f"[eval] {r['run_id']}: no final.pt, skipped")
+        return None, None
+    state = torch.load(ck, map_location="cpu", weights_only=False)
+    mc = state["meta"]["model_config"]
+    path = data_path or r["data"]["path"]
+    compress = np.load(os.path.join(path, "engram_compress.npy")) if mc["engram"]["enabled"] and mc["engram"]["compress"] else None
+    model = build_model(mc, compress, device=device)
+    model.load_state_dict(state["model"])
+    return model, path
+
+
 def main(argv=None):
     ap = argparse.ArgumentParser()
     ap.add_argument("--group", action="append", required=True)
@@ -40,20 +59,9 @@ def main(argv=None):
         out = result_path(args.results_dir, "phase2", "E2.eval", r["run_id"])
         if os.path.exists(out):
             continue
-        ck = os.path.join(args.ckpt_dir, r["run_id"], "final.pt")
-        if not os.path.exists(ck) and dist.is_main():
-            hub_sync.download_file(f"ckpt/{r['run_id']}/final.pt", ck)
-        dist.barrier()
-        if not os.path.exists(ck):
-            if dist.is_main():
-                print(f"[eval_lm] {r['run_id']}: no final.pt, skipped")
+        model, path = load_run_model(r, args.ckpt_dir, args.data_path, info.device)
+        if model is None:
             continue
-        state = torch.load(ck, map_location="cpu", weights_only=False)
-        mc = state["meta"]["model_config"]
-        path = args.data_path or r["data"]["path"]
-        compress = np.load(os.path.join(path, "engram_compress.npy")) if mc["engram"]["enabled"] and mc["engram"]["compress"] else None
-        model = build_model(mc, compress, device=info.device)
-        model.load_state_dict(state["model"])
         val = LMData(path, r["data"]["seq_len"], "val")
         amp = torch.float16 if info.device.type == "cuda" else None
         metrics = evaluate_lm(model, val, info.device, batch_size=args.batch, amp_dtype=amp)

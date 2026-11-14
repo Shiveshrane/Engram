@@ -162,3 +162,47 @@ protect in-context recall by taking over the memorization?
 A2 − A1 exceeds 2σ on every loss, in the direction of A2 being **worse** (+0.035 nats overall, +0.039 on the
 in-context-copy loss). A3 ≈ A2. Descriptively, the GDN states of A2 / A3 have higher effective rank and Frobenius
 norm than A1's at positions 256 / 512 / 1023 (e.g. eff. rank 18.1 vs 15.7 at 1023). Cost: ~$12.5 of Modal credit.
+
+### E3 outcome (exploratory; Modal 1× L4 per run, code d3af24f, 41 runs, DEVIATIONS.md D14)
+
+In-context recall (eval set, mean ± std over 5 seeds); fact recall; median escape step (first eval step with
+in-context val recall ≥ 0.5) and the number of seeds that escape within 6,000 steps.
+
+| Arm | ctx, facts off | ctx, facts on | fact recall | escape step off / on | escaped off / on |
+|---|---|---|---|---|---|
+| A1 | 0.983 ± 0.007 | 0.984 ± 0.012 | 1.000 | 1000 / 1250 | 5 / 5 |
+| A2 | 0.955 ± 0.028 | 0.919 ± 0.114 | 1.000 | 2000 / 2500 | 5 / 5 |
+| A3 | 0.980 ± 0.021 | 0.947 ± 0.032 | 1.000 | 1250 / 1750 | 5 / 5 |
+| A4 | 0.980 ± 0.008 | 0.713 ± 0.433 | 1.000 | 1500 / 2750 | 5 / 4 |
+| A6 | — | 0.0006 | 1.000 | — | 0 |
+
+- **H5a not supported:** A1 facts off − on = −0.0002 (2σ threshold 0.020). The memorization load does not reduce
+  A1's in-context recall, so the precondition of H5 fails.
+- **H5 not supported:** A2 − A1 = −0.065 at facts on (threshold 0.162); A2 − A3 = −0.029 (0.167); A2 − A4 = +0.205
+  (0.633). Context check, facts off: A2 − A1 = −0.029 (threshold 0.040).
+- Leak: A6 in-context recall 0.06% < 1% (pass); A6 fact recall 100%, as expected.
+- Descriptive: every arm stores all 2,048 facts. Every table arm (A2, A3, A4) escapes the in-context recall plateau
+  later than A1, more so with facts on. Cost ~$3.75.
+
+## Follow-up studies after E3 (human decision 2026-11-15, rules fixed before any of these runs)
+
+Exploratory and descriptive. They answer two questions about the Phase 2 result (A2 worse than A1 by > 2σ).
+
+### E2.ngram: does Engram help where its lookup is well trained?
+- For each val input position p ≥ 2 of a window, the key is the training-set count of the trigram (and, secondary,
+  the bigram) of canonical ids ending at p: the n-grams Engram's order-3 / order-2 heads hash
+  (`scripts/ngram_counts.py`, counted over all 150M training tokens).
+- Buckets of that count: 0, 1–9, 10–99, 100–999, ≥ 1,000 (val token shares for trigrams: 26 / 25 / 26 / 17 / 7%).
+- Metric: mean cross-entropy per bucket (`eval/lm_eval.py` `evaluate_lm_ngram`), for the 9 E2.1 runs (and the
+  E2.long runs). Comparisons: A2 − A1 and A3 − A1 per bucket, 2σ pooled over 3 seeds.
+- Reading fixed in advance: if Engram's table helps with frequent n-grams, A2 − A1 decreases as the count grows
+  and A3 − A1 does not (A3's table is frozen and random). A2 < A1 by > 2σ in the ≥ 1,000 bucket would be a positive
+  result for Engram on frequent n-grams. A2 − A1 flat or growing with the count means no such effect.
+
+### E2.long: does the A2 − A1 gap close with more training?
+- A1 and A2, seed 0, 4,576 steps = 2× E2.1 (300M tokens seen = 2 epochs of the 150M training tokens; no more
+  unique data was prepared). All other settings as E2.1 (Modal A100, bf16 + TF32). Cost cap $7.
+- Metrics: the E2.eval losses (full val set) and E2.ngram buckets.
+- Reading fixed in advance (one seed, descriptive): the gap "closes" if A2 − A1 at 2× steps is less than half of
+  E2.1's 3-seed mean gap (+0.035 nats overall); it "persists" if it is at least E2.1's seed-0 gap minus 2× E2.1's
+  pooled seed std; otherwise "shrinks".

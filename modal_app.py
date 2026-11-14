@@ -12,6 +12,10 @@ Then, in order:
     modal run modal_app.py::evaluate             # E2.eval for every finished run, in parallel; prints the Phase 2 tables
     modal run modal_app.py::download             # results + logs -> results/Modal-phase2/ (--ckpt also pulls final.pt)
 
+Exploratory follow-ups (PREREG.md), after E2.1 and its eval:
+    modal run modal_app.py::ngram                # E2.ngram: E2.1 loss by training count of the looked-up n-gram (~$0.2)
+    modal run modal_app.py::long                 # E2.long: A1, A2 seed 0 at 2x steps + their evals (~$5, cap 7)
+
 Study E3 (facts, the NB30 + NB31 runs) on one L4 per run, all at the same time, no data upload needed:
     modal run modal_app.py::facts                # ~$0.05 pilot, then all 41 runs if the projected cost is under
                                                  # --max-dollars (default 8); prints the E3 tables. --dry-run plans only.
@@ -141,6 +145,19 @@ def eval_one(run_id: str, group: str, commit: str, backend: str) -> dict:
     rc = run_logged([sys.executable, "-m", "engramdelta.scripts.eval_lm", "--group", group, "--run-id", run_id,
                      "--results-dir", RES, "--ckpt-dir", CKPT, "--data-path", LMDATA],
                     f"{RES}/_logs/E2.eval/{run_id}.log")
+    vol.commit()
+    return {"run_id": run_id, "rc": rc, "wall_minutes": (time.time() - t0) / 60}
+
+
+@app.function(timeout=30 * 60, gpu=FACTS_GPU, cpu=FACTS_CPU, memory=FACTS_MEMORY_MB, volumes={VOL_MOUNT: vol})
+def eval_ngram_one(run_id: str, group: str, commit: str, backend: str) -> dict:
+    """Study E2.ngram for one finished LM run (small eval, so the cheaper GPU)."""
+    _enter(commit, backend)
+    from engramdelta.scripts.sweep import run_logged
+    t0 = time.time()
+    rc = run_logged([sys.executable, "-m", "engramdelta.scripts.eval_ngram", "--group", group, "--run-id", run_id,
+                     "--results-dir", RES, "--ckpt-dir", CKPT, "--data-path", LMDATA],
+                    f"{RES}/_logs/E2.ngram/{run_id}.log")
     vol.commit()
     return {"run_id": run_id, "rc": rc, "wall_minutes": (time.time() - t0) / 60}
 
@@ -328,7 +345,7 @@ def evaluate(groups: str = "E2.1"):
     import pandas as pd
     from engramdelta import analysis
     pd.set_option("display.width", 200)
-    t = analysis.phase2_table(str(res))
+    t = analysis.phase2_table(str(res), source_groups=tuple(groups.split(",")))
     if not t.empty:
         log(t.to_string(index=False))
         log(analysis.phase2_relative(t).to_string(index=False))
@@ -424,6 +441,128 @@ def facts(max_dollars: float = 8.0, dry_run: bool = False):
     if not t.empty:
         log(analysis.facts_summary(t).to_string(index=False))
         log(analysis.facts_tests(t).to_string(index=False))
+
+
+def _ngram_eval(groups: tuple, commit: str, backend: str) -> pathlib.Path:
+    """Upload val_ngram_counts.npz if needed, run eval_ngram_one for every finished run of `groups`, pull."""
+    sys.path.insert(0, str(REPO))
+    from engramdelta.scripts.ngram_counts import OUT_NAME, build
+    from engramdelta.utils.run_log import read_results, result_path
+    local = REPO / "results" / "lmdata" / OUT_NAME
+    if not local.exists():
+        build(str(local.parent))
+    if OUT_NAME not in [pathlib.PurePosixPath(e.path).name for e in vol.listdir("lmdata")]:
+        with vol.batch_upload() as b:
+            b.put_file(str(local), f"/lmdata/{OUT_NAME}")
+        log(f"[ngram] uploaded {OUT_NAME} to the volume")
+    res = pull()
+    todo = [(r["run_id"], g) for g in groups for r in read_results(str(res / "phase2" / g))
+            if r.get("status") == "done" and not os.path.exists(result_path(str(res), "phase2", "E2.ngram", r["run_id"]))]
+    log(f"[ngram] {len(todo)} runs in parallel on {FACTS_GPU}")
+    for o in eval_ngram_one.starmap([(rid, g, commit, backend) for rid, g in todo], order_outputs=False,
+                                    return_exceptions=True):
+        log(f"[ngram] {o}")
+    return pull()
+
+
+def _print_ngram(res: pathlib.Path, groups: tuple):
+    import pandas as pd
+    from engramdelta import analysis
+    pd.set_option("display.width", 200)
+    t = analysis.ngram_table(str(res), source_groups=groups)
+    if t.empty:
+        log("[ngram] no results")
+        return
+    log(analysis.ngram_summary(t).round(4).to_string(index=False))
+    if t.groupby("arm")["seed"].nunique().min() >= 3:
+        log(analysis.ngram_tests(t)[["order", "bucket", "A", "B", "diff_A_minus_B", "threshold_2sigma",
+                                     "exceeds_2sigma"]].round(4).to_string(index=False))
+
+
+@app.local_entrypoint()
+def ngram(groups: str = "E2.1"):
+    """Study E2.ngram: loss of finished LM runs by the training-set count of the n-gram Engram looks up (~$0.2)."""
+    commit = git_commit()
+    g = tuple(groups.split(","))
+    log(f"===== ngram {groups} | code {commit} | {FACTS_GPU} at ~${FACTS_DOLLARS_PER_HOUR:.2f}/h")
+    _print_ngram(_ngram_eval(g, commit, load_settings().get("backend", "torch")), g)
+
+
+LONG_ARMS = ("A1", "A2")
+
+
+def _long_runs(results_local: pathlib.Path) -> list:
+    """E2.long (PREREG.md): A1, A2 at seed 0 with twice E2.1's steps (2 epochs of the 150M training tokens)."""
+    sys.path.insert(0, str(REPO))
+    from engramdelta.scripts.make_manifest import build, load_prereg
+    e21 = build("E2.1", load_prereg(str(REPO / "configs" / "prereg.yaml")), str(results_local))
+    steps = 2 * int(next(x for x in e21[0]["set"] if x.startswith("train.steps=")).split("=")[1])
+    return [{"run_id": f"E2.long__{arm}__steps{steps}_s0", "group": "E2.long", "config": f"configs/phase2/{arm}.yaml",
+             "set": ["group=E2.long", "seed=0", f"train.steps={steps}"] + PHASE2_SETS} for arm in LONG_ARMS]
+
+
+@app.local_entrypoint()
+def long(max_dollars: float = 7.0, dry_run: bool = False):
+    """E2.long: train A1 and A2 (seed 0) for 2x the steps in parallel, then E2.eval and E2.ngram for both, and print
+    the A2 - A1 gaps next to E2.1's. Refuses to start above --max-dollars."""
+    commit = git_commit()
+    s = load_settings()
+    if not s:
+        raise SystemExit("no modal_settings.json: run `modal run modal_app.py::bench` first")
+    log(f"===== long E2.long | code {commit} | backend {s['backend']} | {GPU} | cap ${max_dollars:.2f}")
+    if commit.endswith("+dirty"):
+        log("!! uncommitted changes: the result files will record a '+dirty' commit")
+    res = pull()
+    from engramdelta.utils.run_log import read_results, result_path
+    e21 = {r["arm"]: r["train_seconds"] for r in read_results(str(res / "phase2" / "E2.1")) if r.get("seed") == 0}
+    runs = _long_runs(res)
+    plan = []
+    for r in runs:
+        arm = r["run_id"].split("__")[1]
+        minutes = 2 * e21[arm] / 60 + STARTUP_MIN + FINAL_EVAL_MIN + 1      # from E2.1's measured training time
+        done = os.path.exists(result_path(str(res), "phase2", "E2.long", r["run_id"]))
+        plan.append({"run": r, "minutes": minutes, "done": done})
+        log(f"   {r['run_id']:32s} ~{minutes:5.1f} min  ~${minutes / 60 * DOLLARS_PER_HOUR:.2f}" + ("  (done)" if done else ""))
+    todo = [p for p in plan if not p["done"]]
+    cost = sum(p["minutes"] for p in todo) / 60 * DOLLARS_PER_HOUR + 0.4         # + E2.eval and E2.ngram
+    log(f"[plan] projected cost ~${cost:.2f} (training + evals), wall clock ~{max([p['minutes'] for p in todo] or [0]):.0f} min")
+    if cost > max_dollars and todo:
+        raise SystemExit(f"projected ${cost:.2f} > cap ${max_dollars:.2f}: not starting (raise --max-dollars)")
+    if dry_run:
+        log("[long] dry run: nothing started")
+        return
+    if todo:
+        t0, spent = time.time(), 0.0
+        calls = [(p["run"], commit, s["backend"], min(MAX_RUN_MINUTES, 1.5 * p["minutes"] + 10)) for p in todo]
+        for o in run_one.starmap(calls, order_outputs=False, return_exceptions=True):
+            if not isinstance(o, dict):
+                log(f"[long] FAILED (exception): {o}")
+                continue
+            spent += (o["wall_minutes"] + 1) / 60 * DOLLARS_PER_HOUR
+            status = {0: "done", 3: "stopped at its time limit (rerun long to resume)"}.get(o["rc"], f"FAILED rc={o['rc']}")
+            log(f"[long] {o['run_id']}: {status} | {o['wall_minutes']:.1f} min | ~${spent:.2f} so far")
+        log(f"[long] training finished in {(time.time() - t0) / 60:.1f} min wall clock, ~${spent:.2f}")
+        res = pull()
+    todo = [r["run_id"] for r in read_results(str(res / "phase2" / "E2.long"))
+            if r.get("status") == "done" and not os.path.exists(result_path(str(res), "phase2", "E2.eval", r["run_id"]))]
+    for o in eval_one.starmap([(rid, "E2.long", commit, s["backend"]) for rid in todo], order_outputs=False,
+                              return_exceptions=True):
+        log(f"[long eval] {o}")
+    res = _ngram_eval(("E2.long",), commit, s["backend"])
+    import pandas as pd
+    from engramdelta import analysis
+    pd.set_option("display.width", 200)
+    cols = ["loss_all", "loss_pos_0_64", "loss_pos_64_256", "loss_pos_256_1024", "loss_copy"]
+    rows = []
+    for name, t in (("E2.1 seed 0", analysis.phase2_table(str(res), ("E2.1",)).query("seed == 0")),
+                    ("E2.1 mean of 3 seeds", analysis.phase2_table(str(res), ("E2.1",))),
+                    ("E2.long seed 0 (2x steps)", analysis.phase2_table(str(res), ("E2.long",)))):
+        if {"A1", "A2"} <= set(t["arm"]):
+            m = t.groupby("arm")[cols].mean()
+            rows.append({"runs": name, "A1_loss_all": m.loc["A1", "loss_all"],
+                         **{f"A2-A1 {c[5:]}": m.loc["A2", c] - m.loc["A1", c] for c in cols}})
+    log(pd.DataFrame(rows).round(4).to_string(index=False))
+    _print_ngram(res, ("E2.long",))
 
 
 @app.local_entrypoint()
