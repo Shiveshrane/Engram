@@ -808,3 +808,21 @@ Diff: `.changelog/entries/0035/diff.patch`
 **What the change does:** Adds the exploratory Phase 2 results table (full val set, 3 seeds): A2 and A3 are worse than A1 by more than 2 sigma on every loss bucket including the in-context-copy loss; A3 ~ A2; Engram arms have fuller GDN states. Records the Modal cost.
 
 Diff: `.changelog/entries/0036/diff.patch`
+
+---
+
+## [0037] Run study E3 (facts) on Modal: one L4 per run, pilot + cost cap
+*2026-11-14 21:45:54*
+
+- **File:** `modal_app.py` (modified, +119/-2)
+  - **Lines:** 14-17 added; 52-62 added; 104 modified (were 89-90 before); 121-133 added; 339-428 added
+- **File:** `DEVIATIONS.md` (modified, +1/-0)
+  - **Lines:** 45 added
+- **File:** `README.md` (modified, +6/-0)
+  - **Lines:** 90-95 added
+
+**Summary:** Run study E3 (facts) on Modal: one L4 per run, pilot + cost cap
+
+**What the change does:** modal_app.py gains a run_facts function (L4, 4 CPU, 8 GiB) sharing the run body _run with the Phase 2 A100 run_one, and a facts entrypoint: it builds the E3.1+E3.2 manifests (41 runs), runs a 300-step A1/A2 pilot in group E3.bench to measure sec/step (saved to results/Modal-phase2/facts_timing.json), projects the cost with a 1.25 eval margin, refuses above --max-dollars (default 8), launches all pending runs in parallel and prints facts_summary/facts_tests. Training settings stay Phase 1's (fp16, torch backend, global batch 64). DEVIATIONS.md D14 records the hardware change from Kaggle NB30/NB31; README documents the command.
+
+Diff: `.changelog/entries/0037/diff.patch`

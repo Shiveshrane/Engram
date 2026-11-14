@@ -3902,6 +3902,79 @@
           "after_hash": "9e43aacad679"
         }
       ]
+    },
+    {
+      "id": "0037",
+      "time": "2026-11-14 21:45:54",
+      "summary": "Run study E3 (facts) on Modal: one L4 per run, pilot + cost cap",
+      "explanation": "modal_app.py gains a run_facts function (L4, 4 CPU, 8 GiB) sharing the run body _run with the Phase 2 A100 run_one, and a facts entrypoint: it builds the E3.1+E3.2 manifests (41 runs), runs a 300-step A1/A2 pilot in group E3.bench to measure sec/step (saved to results/Modal-phase2/facts_timing.json), projects the cost with a 1.25 eval margin, refuses above --max-dollars (default 8), launches all pending runs in parallel and prints facts_summary/facts_tests. Training settings stay Phase 1's (fp16, torch backend, global batch 64). DEVIATIONS.md D14 records the hardware change from Kaggle NB30/NB31; README documents the command.",
+      "files": [
+        {
+          "path": "modal_app.py",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "14-17",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "52-62",
+              "old": null
+            },
+            {
+              "kind": "modified",
+              "new": "104",
+              "old": "89-90"
+            },
+            {
+              "kind": "added",
+              "new": "121-133",
+              "old": null
+            },
+            {
+              "kind": "added",
+              "new": "339-428",
+              "old": null
+            }
+          ],
+          "added": 119,
+          "removed": 2,
+          "before_existed": true,
+          "after_hash": "258d530cb762"
+        },
+        {
+          "path": "DEVIATIONS.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "45",
+              "old": null
+            }
+          ],
+          "added": 1,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "8f636b1d10f4"
+        },
+        {
+          "path": "README.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "90-95",
+              "old": null
+            }
+          ],
+          "added": 6,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "8e2314d2fd33"
+        }
+      ]
     }
   ]
 }
