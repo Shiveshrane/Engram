@@ -12,6 +12,10 @@ Then, in order:
     modal run modal_app.py::evaluate             # E2.eval for every finished run, in parallel; prints the Phase 2 tables
     modal run modal_app.py::download             # results + logs -> results/Modal-phase2/ (--ckpt also pulls final.pt)
 
+Study E3 (facts, the NB30 + NB31 runs) on one L4 per run, all at the same time, no data upload needed:
+    modal run modal_app.py::facts                # ~$0.05 pilot, then all 41 runs if the projected cost is under
+                                                 # --max-dollars (default 8); prints the E3 tables. --dry-run plans only.
+
 Every command first syncs the volume's results into results/Modal-phase2/results/ and finishes by syncing again.
 Logs: each run's full training / eval output is in results/_logs/<group>/<run_id>.log (written live on the volume,
 part of the downloaded results). Each command also appends what it prints to results/Modal-phase2/run.log.
@@ -45,6 +49,17 @@ DOLLARS_PER_HOUR = 3600 * (0.000583 + CPU_CORES * 0.0000131 + MEMORY_MB / 1024 *
 STARTUP_MIN, FINAL_EVAL_MIN = 2.0, 2.0       # per run, on top of the training time (conservative)
 MAX_RUN_MINUTES = 110                        # hard cap per run, whatever the estimate says
 PHASE2_SETS = [f"data.path={LMDATA}", "train.precision=bf16", "train.tf32=true", "train.hub_ckpt=false"]
+
+# Study E3 (facts, tiny MQAR model): one L4 per run. Phase 1 training settings unchanged (fp16 + GradScaler,
+# torch GDN backend, global batch 64), so only the hardware differs from NB30/NB31 (DEVIATIONS.md D14).
+FACTS_GPU = "L4"
+FACTS_CPU, FACTS_MEMORY_MB = 4.0, 8192
+FACTS_DOLLARS_PER_HOUR = 3600 * (0.000222 + FACTS_CPU * 0.0000131 + FACTS_MEMORY_MB / 1024 * 0.00000222)  # ~= $1.03
+FACTS_MAX_RUN_MINUTES = 60
+FACTS_GROUPS = ("E3.1", "E3.2")
+FACTS_PILOT_STEPS = 300
+FACTS_EVAL_MARGIN = 1.25                     # 23 val evals + checkpoints per run, not in train_seconds
+FACTS_SETS = ["train.hub_ckpt=false"]
 
 vol = modal.Volume.from_name("engramdelta", create_if_missing=True)
 image = (
@@ -86,8 +101,7 @@ def kernels(commit: str) -> dict:
             "fla_import_error": rec.get("fla_import_error"), "gpu": (rec.get("env") or {}).get("gpu")}
 
 
-@app.function(timeout=(MAX_RUN_MINUTES + 15) * 60, **FN)
-def run_one(run: dict, commit: str, backend: str, max_minutes: float) -> dict:
+def _run(run: dict, commit: str, backend: str, max_minutes: float) -> dict:
     """One training run (single GPU, no DDP), logged to results/_logs/<group>/<run_id>.log on the volume."""
     _enter(commit, backend)
     from engramdelta.scripts.sweep import command, phase_of, run_logged
@@ -104,6 +118,19 @@ def run_one(run: dict, commit: str, backend: str, max_minutes: float) -> dict:
         out.update({k: r.get(k) for k in ("throughput_tokens_per_s", "train_seconds", "peak_gpu_mem_gb", "gdn_backend")})
         out["metrics"] = r.get("metrics")
     return out
+
+
+@app.function(timeout=(MAX_RUN_MINUTES + 15) * 60, **FN)
+def run_one(run: dict, commit: str, backend: str, max_minutes: float) -> dict:
+    """Phase 2 run on the A100."""
+    return _run(run, commit, backend, max_minutes)
+
+
+@app.function(timeout=(FACTS_MAX_RUN_MINUTES + 15) * 60, gpu=FACTS_GPU, cpu=FACTS_CPU, memory=FACTS_MEMORY_MB,
+              volumes={VOL_MOUNT: vol})
+def run_facts(run: dict, commit: str, backend: str, max_minutes: float) -> dict:
+    """E3 (tiny MQAR model) run on the cheaper GPU."""
+    return _run(run, commit, backend, max_minutes)
 
 
 @app.function(timeout=60 * 60, **FN)
@@ -307,6 +334,96 @@ def evaluate(groups: str = "E2.1"):
         log(analysis.phase2_relative(t).to_string(index=False))
         log(analysis.phase2_tests(t)[["metric", "A", "B", "mean_A", "mean_B", "diff_A_minus_B",
                                       "threshold_2sigma", "exceeds_2sigma"]].to_string(index=False))
+
+
+def _facts_runs() -> list:
+    sys.path.insert(0, str(REPO))
+    from engramdelta.scripts.make_manifest import build, load_prereg
+    pr = load_prereg(str(REPO / "configs" / "prereg.yaml"))
+    runs = [r for g in FACTS_GROUPS for r in build(g, pr, "results")]
+    for r in runs:
+        r["set"] += FACTS_SETS
+    return runs
+
+
+def _facts_pilot(runs: list, commit: str) -> dict:
+    """FACTS_PILOT_STEPS steps of A1 and A2 (facts on) in group E3.bench (ignored by the analysis): seconds per
+    step and the fixed per-run overhead on this GPU. Saved to results/Modal-phase2/facts_timing.json."""
+    pilot = []
+    for arm in ("A1", "A2"):
+        r = next(x for x in runs if f"__{arm}__" in x["run_id"] and "_M32_" in x["run_id"])
+        keep = [s for s in r["set"] if not s.startswith(("group=", "train.steps=", "train.save_final="))]
+        pilot.append({**r, "group": "E3.bench", "run_id": r["run_id"].replace(r["group"], "E3.bench", 1),
+                      "set": keep + ["group=E3.bench", f"train.steps={FACTS_PILOT_STEPS}"]})
+    log(f"[pilot] {len(pilot)} runs of {FACTS_PILOT_STEPS} steps in parallel on {FACTS_GPU}")
+    timing = {"gpu": FACTS_GPU, "commit": commit, "pilot_steps": FACTS_PILOT_STEPS}
+    for o in run_facts.starmap([(p, commit, "torch", 20) for p in pilot], order_outputs=False, return_exceptions=True):
+        log(f"[pilot] {o}")
+        if isinstance(o, dict) and o.get("rc") == 0 and o.get("train_seconds"):
+            arm = o["run_id"].split("__")[1]
+            timing[arm] = {"sec_per_step": o["train_seconds"] / FACTS_PILOT_STEPS,
+                           "overhead_min": max(o["wall_minutes"] - o["train_seconds"] / 60, 0.0)}
+    if not {"A1", "A2"} <= set(timing):
+        raise SystemExit("pilot failed: see results/Modal-phase2/results/_logs/E3.bench/")
+    (LOCAL_OUT / "facts_timing.json").write_text(json.dumps(timing, indent=1))
+    return timing
+
+
+@app.local_entrypoint()
+def facts(max_dollars: float = 8.0, dry_run: bool = False):
+    """Study E3 (NB30 + NB31 runs): every run on its own L4, all at the same time. Runs a short pilot first (~$0.05)
+    to measure the speed, prints the projected cost, and starts only if it is below --max-dollars."""
+    commit = git_commit()
+    log(f"===== facts {'+'.join(FACTS_GROUPS)} | code {commit} | {FACTS_GPU} at ~${FACTS_DOLLARS_PER_HOUR:.2f}/h | "
+        f"cap ${max_dollars:.2f}")
+    if commit.endswith("+dirty"):
+        log("!! uncommitted changes: the result files will record a '+dirty' commit")
+    res = pull()
+    runs = _facts_runs()                                 # also puts the repo on sys.path
+    from engramdelta.utils.run_log import result_path
+    tp = LOCAL_OUT / "facts_timing.json"
+    timing = json.loads(tp.read_text()) if tp.exists() else _facts_pilot(runs, commit)
+    plan = []
+    for r in runs:
+        arm = r["run_id"].split("__")[1]
+        t = timing["A1" if arm == "A1" else "A2"]          # A3 / A4 / A6 have A2's size or less
+        steps = int(next(x for x in r["set"] if x.startswith("train.steps=")).split("=")[1])
+        minutes = steps * t["sec_per_step"] * FACTS_EVAL_MARGIN / 60 + t["overhead_min"]
+        done = os.path.exists(result_path(str(res), "phase3", r["group"], r["run_id"]))
+        plan.append({"run": r, "minutes": minutes, "done": done})
+    todo = [p for p in plan if not p["done"]]
+    cost = sum(p["minutes"] + 1 for p in todo) / 60 * FACTS_DOLLARS_PER_HOUR
+    log(f"[plan] {len(plan)} runs ({len(plan) - len(todo)} done) | sec/step A1 {timing['A1']['sec_per_step']:.3f}, "
+        f"A2 {timing['A2']['sec_per_step']:.3f} | ~{max([p['minutes'] for p in todo] or [0]):.0f} min per run if all "
+        f"start at once | projected cost ~${cost:.2f}")
+    if not todo:
+        log("[facts] nothing to do")
+    elif cost > max_dollars:
+        raise SystemExit(f"projected ${cost:.2f} > cap ${max_dollars:.2f}: not starting (raise --max-dollars)")
+    elif dry_run:
+        log("[facts] dry run: nothing started")
+        return
+    else:
+        t0, spent = time.time(), 0.0
+        calls = [(p["run"], commit, "torch", min(FACTS_MAX_RUN_MINUTES, 1.5 * p["minutes"] + 10)) for p in todo]
+        for o in run_facts.starmap(calls, order_outputs=False, return_exceptions=True):
+            if not isinstance(o, dict):
+                log(f"[facts] FAILED (exception): {o}")
+                continue
+            spent += (o["wall_minutes"] + 1) / 60 * FACTS_DOLLARS_PER_HOUR
+            m = o.get("metrics") or {}
+            status = {0: "done", 3: "stopped at its time limit (rerun facts to resume)"}.get(o["rc"], f"FAILED rc={o['rc']}")
+            log(f"[facts] {o['run_id']}: {status} | {o['wall_minutes']:.1f} min | recall {m.get('recall')} "
+                f"ctx {m.get('recall_ctx')} fact {m.get('recall_fact')} | ~${spent:.2f} so far")
+        log(f"[facts] finished in {(time.time() - t0) / 60:.1f} min wall clock, ~${spent:.2f} GPU cost")
+        res = pull()
+    import pandas as pd
+    from engramdelta import analysis
+    pd.set_option("display.width", 200)
+    t = analysis.facts_runs(str(res))
+    if not t.empty:
+        log(analysis.facts_summary(t).to_string(index=False))
+        log(analysis.facts_tests(t).to_string(index=False))
 
 
 @app.local_entrypoint()

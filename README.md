@@ -87,6 +87,12 @@ modal run modal_app.py::evaluate              # E2.eval in parallel + Phase 2 ta
 
 Results and every run's log land in `results/Modal-phase2/` (`run.log` = what the commands printed).
 
+Study E3 (the NB30 + NB31 runs) can run there too, one L4 per run, no upload needed (~$5, DEVIATIONS.md D14):
+
+```bash
+modal run modal_app.py::facts                 # ~$0.05 speed pilot, then all 41 E3 runs in parallel + the E3 tables
+```
+
 ## Synchronized DDP in one paragraph
 
 `torchrun --nproc_per_node=2` starts one process per T4. DDP broadcasts rank 0's initial weights and
