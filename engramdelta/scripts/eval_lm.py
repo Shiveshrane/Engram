@@ -30,10 +30,12 @@ def main(argv=None):
     ap.add_argument("--data-path", default=None, help="override the data path stored in the run config")
     ap.add_argument("--state-windows", type=int, default=64)
     ap.add_argument("--batch", type=int, default=4)
+    ap.add_argument("--run-id", action="append", default=None,
+                    help="evaluate only these runs (repeatable); used by modal_app.py to evaluate runs in parallel")
     args = ap.parse_args(argv)
     info = dist.setup("auto")
     runs = [r for g in args.group for r in read_results(os.path.join(args.results_dir, "phase2", g))
-            if r.get("status") == "done"]
+            if r.get("status") == "done" and (args.run_id is None or r["run_id"] in args.run_id)]
     for r in runs:
         out = result_path(args.results_dir, "phase2", "E2.eval", r["run_id"])
         if os.path.exists(out):

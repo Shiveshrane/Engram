@@ -27,6 +27,7 @@ def load(results_dir: str = "results", phase: Optional[str] = None) -> pd.DataFr
             "seed": r.get("seed"), "N": d.get("N"), "F": d.get("F"), "P": d.get("P"),
             "placement": d.get("placement"), "lam": d.get("filler_weight"), "lr": t.get("lr"), "steps": t.get("steps"),
             "recall": m.get("recall"), "val_recall": m.get("val_recall"), "answer_loss": m.get("answer_loss"),
+            "recall_ctx": m.get("recall_ctx"), "recall_fact": m.get("recall_fact"), "n_facts": d.get("n_facts", 0),
             "filler_loss": m.get("filler_loss"), "ppl": m.get("ppl"), "loss_all": m.get("loss_all"),
             "loss_copy": m.get("loss_copy"), "non_embedding": p.get("non_embedding"), "total_params": p.get("total"),
             "engram_table": p.get("engram_table"), "world_size": r.get("world_size"),
@@ -228,6 +229,16 @@ def phase2_table(results_dir: str = "results") -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
+def phase2_tests(t: pd.DataFrame) -> pd.DataFrame:
+    """A2 vs A1 and A3 vs A1 per loss with the 2-sigma rule (descriptive: Phase 2 runs after a failed Gate 1)."""
+    rows = []
+    for arm in ("A2", "A3"):
+        for col in ["loss_all", "loss_pos_0_64", "loss_pos_64_256", "loss_pos_256_1024", "loss_copy"]:
+            c = compare(t.loc[t["arm"] == arm, col], t.loc[t["arm"] == "A1", col], arm, "A1")
+            rows.append({"metric": col, **c})
+    return pd.DataFrame(rows)
+
+
 def phase2_relative(t: pd.DataFrame) -> pd.DataFrame:
     """Relative change of each loss vs the arm's own baseline (A2 vs A1, A3 vs A1, T2 vs T1): the H3 numbers."""
     rows = []
@@ -239,4 +250,55 @@ def phase2_relative(t: pd.DataFrame) -> pd.DataFrame:
             continue
         rows.append({"arm": arm, "baseline": base, "n_seeds": len(a),
                      **{f"rel_{c}": (a[c].mean() - b[c].mean()) / b[c].mean() for c in cols}})
+    return pd.DataFrame(rows)
+
+
+# ---------------- Exploratory study E3: facts + in-context recall ----------------
+
+FACT_GROUPS = ("E3.1", "E3.2")
+
+
+def escape_step(r: dict, threshold: float = 0.5) -> Optional[int]:
+    """First eval step at which the in-context val recall reaches `threshold` (the run "escaped the plateau");
+    None if it never did, including the final eval."""
+    key = "recall_ctx" if r["data"].get("n_facts", 0) else "recall"
+    for step, ev in r.get("eval_curve", []):
+        if ev.get(key) is not None and ev[key] >= threshold:
+            return int(step)
+    final = r["metrics"].get("val_recall_ctx", r["metrics"].get("val_recall"))
+    return int(r["train"]["steps"]) if final is not None and final >= threshold else None
+
+
+def facts_runs(results_dir: str = "results") -> pd.DataFrame:
+    """One row per E3 run. ctx = in-context recall (for facts-off runs this is plain recall)."""
+    rows = []
+    for r in read_results(os.path.join(results_dir, "phase3")):
+        if r.get("group") not in FACT_GROUPS or r.get("status") != "done":
+            continue
+        m, on = r["metrics"], bool(r["data"].get("n_facts", 0))
+        rows.append({"run_id": r["run_id"], "group": r["group"], "arm": r["arm"], "seed": r["seed"],
+                     "facts": "on" if on else "off", "ctx": m["recall_ctx"] if on else m["recall"],
+                     "fact": m.get("recall_fact"), "escape_step": escape_step(r),
+                     "train_seconds": r.get("train_seconds"), "git_commit": r.get("git_commit")})
+    return pd.DataFrame(rows)
+
+
+def facts_summary(t: pd.DataFrame) -> pd.DataFrame:
+    g = t.groupby(["facts", "arm"])
+    out = g.agg(ctx_mean=("ctx", "mean"), ctx_std=("ctx", "std"), fact_mean=("fact", "mean"),
+                fact_std=("fact", "std"), n=("ctx", "count"),
+                escaped=("escape_step", lambda x: int(x.notna().sum())),
+                median_escape_step=("escape_step", "median"))
+    return out.reset_index()
+
+
+def facts_tests(t: pd.DataFrame) -> pd.DataFrame:
+    """The pre-registered E3 comparisons (PREREG.md), on in-context recall. Numbers and rule checks only."""
+    def sel(arm, facts):
+        return t.loc[(t["arm"] == arm) & (t["facts"] == facts), "ctx"]
+    rows = [{"test": "H5a: A1 facts off vs on (memorization load hurts in-context recall)",
+             **compare(sel("A1", "off"), sel("A1", "on"), "A1 off", "A1 on")}]
+    for other in ("A1", "A3", "A4"):
+        rows.append({"test": f"H5: A2 vs {other}, facts on", **compare(sel("A2", "on"), sel(other, "on"), "A2", other)})
+    rows.append({"test": "context: A2 vs A1, facts off", **compare(sel("A2", "off"), sel("A1", "off"), "A2", "A1")})
     return pd.DataFrame(rows)

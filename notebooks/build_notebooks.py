@@ -921,6 +921,45 @@ NB["22_phase2_analysis"] = notebook([
 ], gpu=False)
 
 
+FACTS_INTRO = """
+    **Exploratory study E3: facts + in-context recall** (rules fixed in PREREG.md before any run; Gate 1 failed, so this
+    is follow-up work, not confirmatory). Each sequence has N = 32 in-context key-value pairs to recall **and**, with
+    facts on, 32 queries about fixed two-token *facts* from one global table of 2,048 (the facts never appear in the
+    context, so they must be memorized in the weights). Question: does the memorization load hurt in-context recall,
+    and does an n-gram memory (Engram, which can store a two-token fact directly) protect it?
+
+    Each arm runs with facts **off** (plain MQAR, same N) and **on**, 5 seeds, 6,000 steps, Phase 1 LRs, with a val eval
+    every 250 steps (to see *when* each run escapes the MQAR plateau). Metric: in-context recall (`recall_ctx`).
+
+    **Needs:** no inputs. Notebooks 30 and 31 are independent: run them **at the same time** in your two Kaggle slots.
+    Resumable: rerun with this notebook's output in `PREV_OUTPUTS` until the sweep reports 0 pending.
+"""
+
+FACTS_TABLE = """
+from engramdelta import analysis
+pd.set_option("display.width", 200)
+t = analysis.facts_runs("results")
+print(analysis.facts_summary(t).to_string(index=False))
+print(analysis.facts_tests(t).to_string(index=False))   # complete only when NB30 and NB31 results are both here
+"""
+
+NB["30_facts_main"] = notebook([
+    md("# 30 · E3.1 facts study: A1 vs A2  (~1.7 GPU-h, 20 runs)\n" + textwrap.dedent(FACTS_INTRO)),
+    *setup_cells(gpu=True),
+    *sweep_cells(["E3.1"], 4.0),
+    code("import pandas as pd" + FACTS_TABLE),
+    code(FINISH),
+])
+
+NB["31_facts_controls"] = notebook([
+    md("# 31 · E3.2 facts study: controls A3, A4 and the A6 leak probe  (~1.8 GPU-h, 21 runs)\n" + textwrap.dedent(FACTS_INTRO)),
+    *setup_cells(gpu=True),
+    *sweep_cells(["E3.2"], 4.0),
+    code("import pandas as pd" + FACTS_TABLE),
+    code(FINISH),
+])
+
+
 def main():
     for name, nb in NB.items():
         for c in nb["cells"]:

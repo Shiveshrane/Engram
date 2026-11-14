@@ -11,6 +11,7 @@ Synchronized DDP, so every rank applies the identical update on every optimizer 
   * Gradients are all-reduced (averaged) on every backward pass. Non-final micro-steps of gradient accumulation
     run under no_sync().
   * fp16: GradScaler's inf check runs on the already all-reduced grads, so every rank skips the same steps.
+    train.precision = bf16 (A100 / H100, used on Modal) autocasts to bfloat16 and needs no GradScaler.
     Clipping runs on identical grads, so it gives identical results.
   * Stop decisions (time limit) are all-reduced, and a parameter checksum guard runs every
     train.sync_check_every steps.
@@ -46,7 +47,7 @@ from ..utils.run_log import env_info, git_commit, now, result_path, write_result
 TRAIN_DEFAULTS = {
     "steps": 2000, "global_batch": 64, "grad_accum": 1,
     "lr": 1e-3, "min_lr_ratio": 0.1, "warmup": 100, "weight_decay": 0.1, "betas": [0.9, 0.95], "eps": 1e-8,
-    "clip": 1.0, "precision": "fp16", "device": "auto",
+    "clip": 1.0, "precision": "fp16", "device": "auto", "tf32": False,
     "log_every": 50, "eval_every": 0, "eval_size_during": 500, "eval_batch": 100,
     "ckpt_every": 500, "save_final": False, "hub_ckpt": False, "sync_check_every": 500,
     "final_val_windows": 200,
@@ -140,13 +141,16 @@ def train(cfg: dict, run_id: Optional[str] = None, results_dir: str = "results",
 
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
+    torch.backends.cuda.matmul.allow_tf32 = torch.backends.cudnn.allow_tf32 = bool(t_cfg["tf32"])
     task = setup_task(cfg)
     mc = resolve_model_config(cfg, task)
     torch.manual_seed(cfg["seed"])                       # same on every rank -> identical init
     model = build_model(mc, task["compress"], device=device)
     params = count_params(model)
-    use_amp = t_cfg["precision"] == "fp16" and device.type == "cuda"
-    amp_dtype = torch.float16 if use_amp else None
+    assert t_cfg["precision"] in ("fp16", "bf16", "fp32"), t_cfg["precision"]
+    use_amp = t_cfg["precision"] in ("fp16", "bf16") and device.type == "cuda"
+    amp_dtype = (torch.bfloat16 if t_cfg["precision"] == "bf16" else torch.float16) if use_amp else None
+    use_scaler = use_amp and amp_dtype == torch.float16
     gdn_backend = resolve_backend(mc["gdn"]["backend"]) if mc["mixer"] == "gdn" else None
 
     ddp_model = DDP(model, device_ids=[device.index] if device.type == "cuda" else None,
@@ -155,7 +159,7 @@ def train(cfg: dict, run_id: Optional[str] = None, results_dir: str = "results",
     opt = torch.optim.AdamW(param_groups(model, t_cfg["weight_decay"]), lr=t_cfg["lr"],
                             betas=tuple(t_cfg["betas"]), eps=t_cfg["eps"])
     sched = torch.optim.lr_scheduler.LambdaLR(opt, lr_lambda_factory(t_cfg["steps"], t_cfg["warmup"], t_cfg["min_lr_ratio"]))
-    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
+    scaler = torch.amp.GradScaler("cuda", enabled=use_scaler)
 
     accum = t_cfg["grad_accum"]
     assert t_cfg["global_batch"] % (world * accum) == 0, "global_batch must be divisible by world_size * grad_accum"
@@ -174,7 +178,8 @@ def train(cfg: dict, run_id: Optional[str] = None, results_dir: str = "results",
             if final:
                 ev = evaluate_mqar(model, mq, device, "eval", batch_size=t_cfg["eval_batch"], amp_dtype=amp_dtype)
                 va = evaluate_mqar(model, mq, device, "val", batch_size=t_cfg["eval_batch"], amp_dtype=amp_dtype)
-                return {**ev, "val_recall": va["recall"]}
+                return {**ev, "val_recall": va["recall"],
+                        **({"val_recall_ctx": va["recall_ctx"]} if "recall_ctx" in va else {})}
             return evaluate_mqar(model, mq, device, "val", size=t_cfg["eval_size_during"],
                                  batch_size=t_cfg["eval_batch"], amp_dtype=amp_dtype)
         n = t_cfg["final_val_windows"] if final else max(1, t_cfg["final_val_windows"] // 4)
@@ -202,7 +207,7 @@ def train(cfg: dict, run_id: Optional[str] = None, results_dir: str = "results",
             hub_sync.push_file(ck_path, f"ckpt/{run_id}/last.pt")
 
     log(f"[{run_id}] world={world} device={device} B/rank={B} accum={accum} T={task['seq_len']} "
-        f"amp={use_amp} gdn_backend={gdn_backend} params={params}")
+        f"amp={amp_dtype} gdn_backend={gdn_backend} params={params}")
     model.train()
     log_sums = torch.zeros(3, device=device)          # loss_main, loss_filler, n
     seg_t0 = time.time()
@@ -226,10 +231,10 @@ def train(cfg: dict, run_id: Optional[str] = None, results_dir: str = "results",
                 nonfinite += 1
         scaler.unscale_(opt)
         gnorm = torch.nn.utils.clip_grad_norm_(trainable, t_cfg["clip"])
-        scale_before = scaler.get_scale() if use_amp else 1.0
+        scale_before = scaler.get_scale() if use_scaler else 1.0
         scaler.step(opt)
         scaler.update()
-        if use_amp and scaler.get_scale() < scale_before:
+        if use_scaler and scaler.get_scale() < scale_before:
             skipped += 1
         sched.step()
         done = step + 1
@@ -280,6 +285,8 @@ def train(cfg: dict, run_id: Optional[str] = None, results_dir: str = "results",
         if start_step == 0 else None,
         "seq_len": task["seq_len"], "tokens_per_step": tokens_per_step, "per_rank_batch": B,
         "world_size": world, "dist_backend": info.backend, "amp": use_amp, "gdn_backend": gdn_backend,
+        "precision": t_cfg["precision"] if use_amp else "fp32",
+        "peak_gpu_mem_gb": torch.cuda.max_memory_allocated(device) / 2 ** 30 if device.type == "cuda" else None,
         "git_commit": git_commit(), "env": env_info(), "config_source": cfg.get("_source"),
         "overrides": cfg.get("_overrides"), "finished_at": now(),
     }

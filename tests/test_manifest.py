@@ -10,7 +10,7 @@ PREREG = {"N_star": 32, "phase1_steps": 6000, "seeds": [0, 1, 2], "lr_candidates
           "phase2_train_tokens": 120_000_000, "phase2_hours_per_run": 1.7, "phase2_max_tokens": 150_000_000}
 
 EXPECTED = {"E0.3": 2, "E0.4": 35, "E0.5": 5, "E0.6": 2, "E0.7": 4, "E1.0a": 6, "E1.0c": 6, "E1.1": 12, "E1.2": 30,
-            "E1.2l": 1, "E1.3": 12, "E2.0": 2, "E2.1": 3, "E2.2": 2}
+            "E1.2l": 1, "E1.3": 12, "E2.0": 2, "E2.1": 3, "E2.2": 2, "E3.1": 20, "E3.2": 21}
 
 
 def sets(runs, prefix):
@@ -65,3 +65,21 @@ def test_e07_clutter_pilot_cells(tmp_path):
 def test_phase1_needs_primary_f(tmp_path):
     with pytest.raises(SystemExit):
         build("E1.1", dict(PREREG, primary_cell=dict(PREREG["primary_cell"], F=None)), str(tmp_path))
+
+
+def test_phase2_seeds(tmp_path):
+    runs = build("E2.1", dict(PREREG, phase2_seeds=[0, 1, 2]), str(tmp_path))
+    assert len(runs) == 9 and len({r["run_id"] for r in runs}) == 9
+    assert {s for r in runs for s in r["set"] if s.startswith("seed=")} == {"seed=0", "seed=1", "seed=2"}
+
+
+def test_facts_study_cells(tmp_path):
+    e31, e32 = (build(g, PREREG, str(tmp_path)) for g in ("E3.1", "E3.2"))
+    for r in e31 + e32:
+        assert "phase=phase3" in r["set"] and "data.F=0" in r["set"] and "train.eval_every=250" in r["set"]
+        on = "data.n_facts=32" in r["set"]
+        assert on == r["run_id"].endswith("_M32_K2048") and on == ("data.fact_pool=2048" in r["set"])
+    assert {r["config"].split("/")[-1] for r in e31} == {"A1.yaml", "A2.yaml"}
+    assert sum("data.n_facts=32" in r["set"] for r in e31) == 10
+    a6 = [r for r in e32 if "/A6.yaml" in r["config"]]
+    assert len(a6) == 1 and "data.n_facts=32" in a6[0]["set"]

@@ -17,6 +17,9 @@ Pre-registered resolution rules (also in PREREG.md):
                   (largest N with A1 mean recall >= 0.9). E0.6 / E0.7 therefore run after E0.4.
   Primary cell    primary_cell.F and .filler_weight come from prereg.yaml (after the E0.7 clutter pilot: F = 512,
                   lambda = 0). Every Phase 1 cell uses that lambda; E1.0c runs the other lambda as the check.
+  Phase 2 seeds   prereg phase2_seeds (default [0]).
+  E3 (facts)      exploratory study, PREREG.md: N = N_star, F = 0, Phase 1 LRs and steps, seeds = phase3_seeds;
+                  each arm with facts off (plain MQAR) and on (FACTS_M fact queries from a table of FACTS_K facts).
 """
 import argparse
 import os
@@ -31,6 +34,7 @@ PHASE0_N = [16, 32, 64, 128, 256]
 PHASE0_STEPS = 4000      # E0.4 / E0.5 training steps (pre-registered; the value of the first NB02 run)
 DESIGN_F = (128, 256, 512)   # the design's clutter levels (design §7.2), besides F = 0
 E07_CELLS = [(64, 1.0), (128, 1.0), (256, 1.0), (512, 0.0)]   # clutter pilot: (F, lambda)
+FACTS_M, FACTS_K = 32, 2048       # E3: fact queries per sequence, facts in the fixed global table
 LR_INHERIT = {"A3": "A2", "A4": "A2", "A5": "A1", "A6": "A1", "A1_noGconv": "A1",
               "A2_noEconv": "A2", "A2_noGconv": "A2", "A2_noboth": "A2"}
 
@@ -175,9 +179,25 @@ def build(group: str, pr: dict, results_dir: str) -> List[dict]:
         steps = phase2_steps(pr, results_dir)
         arms = ("A1", "A2", "A3") if group == "E2.1" else ("T1", "T2")
         for arm in arms:
-            runs.append({"run_id": f"{group}__{arm}__steps{steps}_s0", "group": group,
-                         "config": f"configs/phase2/{arm}.yaml",
-                         "set": [f"group={group}", "seed=0", f"train.steps={steps}"]})
+            for s in pr.get("phase2_seeds") or [0]:
+                runs.append({"run_id": f"{group}__{arm}__steps{steps}_s{s}", "group": group,
+                             "config": f"configs/phase2/{arm}.yaml",
+                             "set": [f"group={group}", f"seed={s}", f"train.steps={steps}"]})
+    elif group in ("E3.1", "E3.2"):
+        # Facts study (PREREG.md, exploratory study E3): in-context recall while the model must also memorize
+        # FACTS_K fixed two-token facts. E3.1 = the main comparison (A1, A2); E3.2 = controls (A3, A4) + leak probe.
+        Ns, steps, lrs = need(pr, "N_star"), need(pr, "phase1_steps"), resolve_lrs(pr, results_dir)
+        seeds3 = pr.get("phase3_seeds") or [0, 1, 2, 3, 4]
+        facts = ["data.n_facts={}".format(FACTS_M), "data.fact_pool={}".format(FACTS_K)]
+        base = ["phase=phase3", "train.eval_every=250"]
+        for arm in (("A1", "A2") if group == "E3.1" else ("A3", "A4")):
+            for on in (False, True):
+                runs += [mqar_run(group, "phase1", arm, s, Ns, 0, 64, "a", 0.0, lrs[arm], steps,
+                                  extra=base + (facts + ["train.save_final=true"] if on else []),
+                                  tag=f"_M{FACTS_M}_K{FACTS_K}" if on else "_M0") for s in seeds3]
+        if group == "E3.2":     # leak probe: the Engram-only model must stay at chance on the in-context queries
+            runs.append(mqar_run(group, "phase1", "A6", 0, Ns, 0, 64, "a", 0.0, lrs["A6"], steps,
+                                 extra=base + facts, tag=f"_M{FACTS_M}_K{FACTS_K}"))
     else:
         sys.exit(f"unknown group {group}")
     return runs
@@ -187,6 +207,7 @@ GROUP_SETS = {
     "all-phase0": ["E0.3", "E0.4", "E0.5", "E0.6", "E0.7"],
     "all-phase1": ["E1.0a", "E1.0c", "E1.1", "E1.2", "E1.2l", "E1.3"],
     "all-phase2": ["E2.0", "E2.1", "E2.2"],
+    "all-phase3": ["E3.1", "E3.2"],
 }
 
 

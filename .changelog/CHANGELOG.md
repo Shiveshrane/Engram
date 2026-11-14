@@ -652,3 +652,129 @@ Diff: `.changelog/entries/0025/diff.patch`
 **What the change does:** NB10 (E1.0a, code 1997b4d) resolved the LRs by the pre-registered rule (best val recall, ties to the smaller LR): A1 1e-3 (val recall 0.018/0.659/0.282 at 3e-4/1e-3/3e-3), A2 3e-3 (0.001/0.002/0.068). prereg.yaml now holds them as numbers, so notebooks 11-13 need no inputs; inherited arms follow LR_INHERIT. PREREG.md Phase 0 outcomes gains an LR row noting that A2's best is the largest candidate.
 
 Diff: `.changelog/entries/0026/diff.patch`
+
+---
+
+## [0027] Add the MQAR facts variant (E3) with split in-context / fact recall
+*2026-11-14 19:12:26*
+
+- **File:** `engramdelta/data/mqar.py` (modified, +89/-10)
+  - **Lines:** 35-45 added; 56 modified (were 45 before); 81-84 added; 107 modified (were 92 before); 111-118 added; 120 modified (were 97 before); 129 modified (were 106 before); 157-158 modified (were 134-135 before); 178-189 added; 191-193 modified (were 156 before); 223-263 added; 282 modified (were 204 before); 284-286 modified (were 206-207 before)
+- **File:** `engramdelta/eval/mqar_eval.py` (modified, +20/-7)
+  - **Lines:** 5-6 modified (were 5 before); 25-27 modified (were 24 before); 35-43 modified (were 32-33 before); 46-51 modified (were 36-38 before)
+- **File:** `tests/test_mqar_facts.py` (created, +102/-0)
+  - **Lines:** 1-102 added
+
+**Summary:** Add the MQAR facts variant (E3) with split in-context / fact recall
+
+**What the change does:** MQARConfig gains n_facts, fact_pool, fact_vocab, fact_seed. With n_facts > 0, generate() calls _generate_with_facts(): besides the N in-context pairs, each sequence gets n_facts queries about fixed two-token facts (a, b) -> value from one global table (fact_table(), own token range after the filler), shuffled with the in-context queries in 2-token slots, plus a qtype tensor (1 in-context, 2 fact). seq_len and layout() include the fact slots; fixed_set() caches/seeds by the fact fields only when facts are on. evaluate_mqar() reports recall_ctx and recall_fact from a second forward pass when qtype is present. With n_facts = 0 every sequence is bit-identical to before (test_plain_task_unchanged checks fingerprints taken at commit 6748062).
+
+Diff: `.changelog/entries/0027/diff.patch`
+
+---
+
+## [0028] train.py: bf16 / TF32 options, peak GPU memory and val_recall_ctx in results
+*2026-11-14 19:12:26*
+
+- **File:** `engramdelta/scripts/train.py` (modified, +15/-8)
+  - **Lines:** 14 added; 50 modified (were 49 before); 144 added; 150-153 modified (were 148-149 before); 162 modified (were 158 before); 181-182 modified (were 177 before); 210 modified (were 205 before); 234 modified (were 229 before); 237 modified (were 232 before); 288-289 added
+
+**Summary:** train.py: bf16 / TF32 options, peak GPU memory and val_recall_ctx in results
+
+**What the change does:** train.precision now accepts fp16 (default, unchanged), bf16 (autocast to bfloat16 with no GradScaler, for A100 on Modal) or fp32; train.tf32 (default false) enables TF32 matmuls. The result record gains precision, peak_gpu_mem_gb and, for the facts variant, val_recall_ctx; the start log line prints the autocast dtype.
+
+Diff: `.changelog/entries/0028/diff.patch`
+
+---
+
+## [0029] eval_lm: --run-id filter so each Phase 2 run can be evaluated in its own container
+*2026-11-14 19:12:26*
+
+- **File:** `engramdelta/scripts/eval_lm.py` (modified, +3/-1)
+  - **Lines:** 33-34 added; 38 modified (were 36 before)
+
+**Summary:** eval_lm: --run-id filter so each Phase 2 run can be evaluated in its own container
+
+**What the change does:** eval_lm previously evaluated every finished run of the given groups. The repeatable --run-id option restricts it to the named runs; modal_app.py uses it to evaluate all Phase 2 runs in parallel.
+
+Diff: `.changelog/entries/0029/diff.patch`
+
+---
+
+## [0030] Manifests: Phase 2 seeds from prereg and the E3.1 / E3.2 facts-study groups
+*2026-11-14 19:12:26*
+
+- **File:** `engramdelta/scripts/make_manifest.py` (modified, +24/-3)
+  - **Lines:** 20-22 added; 37 added; 182-200 modified (were 178-180 before); 210 added
+- **File:** `tests/test_manifest.py` (modified, +19/-1)
+  - **Lines:** 13 modified (were 13 before); 68-85 added
+- **File:** `configs/prereg.yaml` (modified, +2/-0)
+  - **Lines:** 15-16 added
+
+**Summary:** Manifests: Phase 2 seeds from prereg and the E3.1 / E3.2 facts-study groups
+
+**What the change does:** E2.1/E2.2 now build one run per seed in prereg phase2_seeds (default [0]; set to [0, 1, 2]). New groups E3.1 (A1, A2) and E3.2 (A3, A4, plus one A6 leak probe), each arm with facts off and on (32 fact queries from 2,048 facts), N = N_star, F = 0, Phase 1 LRs and steps, eval every 250 steps, phase3, seeds phase3_seeds = [0..4]; group set all-phase3. Tests cover counts (20 / 21), cells and the Phase 2 seeds.
+
+Diff: `.changelog/entries/0030/diff.patch`
+
+---
+
+## [0031] analysis: facts-study tables (E3) and Phase 2 2-sigma tests
+*2026-11-14 19:12:26*
+
+- **File:** `engramdelta/analysis.py` (modified, +62/-0)
+  - **Lines:** 30 added; 232-241 added; 254-304 added
+
+**Summary:** analysis: facts-study tables (E3) and Phase 2 2-sigma tests
+
+**What the change does:** load() adds recall_ctx, recall_fact and n_facts. New: escape_step() (first eval step with in-context val recall >= 0.5), facts_runs(), facts_summary() (means, escaped seeds, median escape step per arm and facts on/off) and facts_tests() (the pre-registered H5a / H5 comparisons). phase2_tests() applies the 2-sigma rule to A2 vs A1 and A3 vs A1 per Phase 2 loss, now that Phase 2 has 3 seeds.
+
+Diff: `.changelog/entries/0031/diff.patch`
+
+---
+
+## [0032] Add Kaggle notebooks 30 (E3.1) and 31 (E3.2) for the facts study
+*2026-11-14 19:12:26*
+
+- **File:** `notebooks/build_notebooks.py` (modified, +39/-0)
+  - **Lines:** 924-962 added
+
+**Summary:** Add Kaggle notebooks 30 (E3.1) and 31 (E3.2) for the facts study
+
+**What the change does:** Two GPU notebooks built from the shared setup / sweep / finish cells: 30_facts_main sweeps E3.1 (A1 vs A2, 20 runs, ~1.7 h), 31_facts_controls sweeps E3.2 (A3, A4, A6, 21 runs, ~1.8 h). Both need no inputs, can run in parallel, and end by printing facts_summary and facts_tests.
+
+Diff: `.changelog/entries/0032/diff.patch`
+
+---
+
+## [0033] Add modal_app.py: Phase 2 on Modal, one A100 per run, all runs in parallel, with a cost cap
+*2026-11-14 19:12:26*
+
+- **File:** `modal_app.py` (created, +314/-0)
+  - **Lines:** 1-314 added
+
+**Summary:** Add modal_app.py: Phase 2 on Modal, one A100 per run, all runs in parallel, with a cost cap
+
+**What the change does:** Entry points: upload_data (lmdata to the 'engramdelta' volume), bench (GDN kernel test + E2.0 throughput pilot on A100, saves the backend choice, prints projected minutes and dollars per E2.1 run), train (all pending E2.1 runs via run_one.starmap, each with --max-minutes and a container timeout; refuses to start above --max-dollars, default 20; --dry-run), evaluate (eval_lm per run in parallel, then Phase 2 tables) and download. Runs log to results/_logs on the volume; every command appends to results/Modal-phase2/run.log and syncs results there.
+
+Diff: `.changelog/entries/0033/diff.patch`
+
+---
+
+## [0034] Record Phase 1 outcome, Gate 1 decision and the exploratory Phase 2 / E3 rules
+*2026-11-14 19:12:26*
+
+- **File:** `PREREG.md` (modified, +46/-0)
+  - **Lines:** 107-152 added
+- **File:** `DEVIATIONS.md` (modified, +2/-0)
+  - **Lines:** 43-44 added
+- **File:** `README.md` (modified, +17/-0)
+  - **Lines:** 62-63 added; 75-89 added
+- **File:** `.gitignore` (modified, +3/-0)
+  - **Lines:** 16-18 added
+
+**Summary:** Record Phase 1 outcome, Gate 1 decision and the exploratory Phase 2 / E3 rules
+
+**What the change does:** PREREG.md: Phase 1 outcomes table (H1 holds, H2 not supported, H4, leak, Gate 1 fails) and the rules for the exploratory follow-ups fixed before any run: Phase 2 on Modal (A1/A2/A3 x 3 seeds, bf16) and study E3 (facts + in-context recall, H5a / H5, 2-sigma n = 5, leak probe). DEVIATIONS D12 (Phase 2 on Modal, 3 seeds) and D13 (study E3). README documents notebooks 30/31 and the Modal commands. .gitignore excludes results/lmdata/.
+
+Diff: `.changelog/entries/0034/diff.patch`

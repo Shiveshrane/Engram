@@ -12,3 +12,5 @@ primary_cell: {F: 512, P: 64, placement: a, filler_weight: 0.0}    # N = N_star;
 phase2_train_tokens: auto    # "auto" = rule from E2.0 throughput (see make_manifest.py); or an int
 phase2_hours_per_run: 1.7
 phase2_max_tokens: 150000000
+phase2_seeds: [0, 1, 2]      # 2026-11-14, after Gate 1 failed: Phase 2 runs as an exploratory study on Modal (1x A100 per run), 3 seeds
+phase3_seeds: [0, 1, 2, 3, 4]   # exploratory study E3 (facts + in-context recall), fixed before any E3 run (PREREG.md)

@@ -59,6 +59,8 @@ python -m engramdelta.scripts.param_table --phase phase1
 | `20_phase2_train` | T4 x2 | 9.5 | E2.0 to E2.2 (5 LM runs), resumable |
 | `21_phase2_eval` | T4 x2 | 0.75 | ppl, position buckets, in-context-copy loss, state occupancy |
 | `22_phase2_analysis` | CPU | 0 | tables and plots |
+| `30_facts_main` | T4 x2 | 1.7 | exploratory E3.1: facts + in-context recall, A1 vs A2 (PREREG.md). 30 and 31 run in parallel |
+| `31_facts_controls` | T4 x2 | 1.8 | exploratory E3.2: controls A3, A4 + A6 leak probe |
 
 All runs are resumable. Re-running a notebook skips finished runs and continues unfinished ones from their checkpoint.
 
@@ -69,6 +71,21 @@ of any failed cell) live to `run.log` at the top of its output, and every traini
 `results/_logs/<group>/<run_id>.log`. After every cell, `results/` (result JSONs + all logs, no checkpoints) is zipped
 into `<notebook>_results.zip` in the notebook's output. Download that zip from the Output tab and unzip it into the
 repo with `unzip -n <notebook>_results.zip -d <repo>`.
+
+## Running Phase 2 on Modal (exploratory, after Gate 1)
+
+Phase 2 can instead run on [Modal](https://modal.com), one A100 per run, every run at the same time (`modal_app.py`,
+~$10 for A1/A2/A3 × 3 seeds at the measured speed; it refuses to start above `--max-dollars`):
+
+```bash
+pip install modal && modal token new          # once
+modal run modal_app.py::upload_data           # once: results/lmdata (notebook 03 output) -> Modal volume
+modal run modal_app.py::bench                 # ~$0.5: kernel test + throughput pilot; prints the cost per run
+modal run modal_app.py::train                 # all E2.1 runs in parallel (--dry-run to only see the plan)
+modal run modal_app.py::evaluate              # E2.eval in parallel + Phase 2 tables
+```
+
+Results and every run's log land in `results/Modal-phase2/` (`run.log` = what the commands printed).
 
 ## Synchronized DDP in one paragraph
 

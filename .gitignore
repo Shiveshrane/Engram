@@ -13,5 +13,8 @@ logs/
 *_results.zip.tmp
 run.log
 
+# large local data (notebook 03 output; upload it to Kaggle / Modal instead)
+results/lmdata/
+
 # design doc stays local (not in the repo)
 ENGRAMDELTA_DESIGN.md

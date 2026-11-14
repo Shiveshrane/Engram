@@ -104,3 +104,49 @@ added back is 2 extra seeds of A1–A4 at the primary cell.
 | Measured Phase 1 run time (min) | 12.1 train min for A1 at F = 512 (T = 640), 6,000 steps |
 | Phase 1 budget estimate (GPU-h) | 10.5 (67 runs) |
 | LRs (E1.0a, NB10, code 1997b4d) | A1 1e-3 (val recall 0.659), A2 3e-3 (0.068; best of the three is the largest candidate). A3/A4/A2_* use A2's, A5/A6/A1_noGconv use A1's |
+
+## Phase 1 outcomes and Gate 1 (all 67 runs; NB10–NB13, code 6748062; analysis run locally = NB14)
+
+| Item | Value |
+|------|-------|
+| H1: A1 F = 0 vs F = 512 | 0.992 vs 0.754, diff 0.238 > 2σ 0.186: **holds** |
+| H2: A2 vs A1 / A3 / A4 (primary cell) | A2 0.618 vs 0.754 / 0.900 / 0.693; no comparison exceeds 2σ: **not supported** |
+| H4 (2×2 conv ablation) | all within 2σ of full A2 (A2 std 0.47); descriptively GDN short conv off → A1 0.03, A2 0.16; Engram conv off → 0.73 |
+| Leak (E1.2l) | A6 0.04% (< 1%): pass |
+| E1.0c (λ = 1, descriptive) | A1 3/3 seeds at chance; A2 1/3 seeds learned (0.91) |
+| fp16 health | 0 non-finite losses; max 6 GradScaler-skipped steps per run |
+| **Gate 1** | **fails** under the rule (H2 not supported) |
+
+## After Gate 1: exploratory studies (human decision 2026-11-14, rules fixed before any of these runs)
+
+Gate 1 failed, so nothing below is confirmatory: it is reported as exploratory, follow-up work, with its own rules
+fixed here before any run.
+
+### Phase 2 (LM), exploratory
+- Runs on **Modal, 1× A100 40 GB per run, bf16**, every run in its own container at the same time (`modal_app.py`).
+  Arms A1, A2, A3 × seeds {0, 1, 2} (`phase2_seeds`). T1 / T2 (H3) only if budget is left.
+- Token budget: the existing rule (E2.0 throughput on the same hardware, cap 150M tokens). The GDN kernel
+  (FLA or torch) is chosen by the kernel test on the same GPU before E2.0, and is the same for every arm.
+- Reported: `phase2_table`, `phase2_relative` and `phase2_tests` (A2 vs A1 and A3 vs A1 per loss with the 2σ rule,
+  n = 3), plus state occupancy. With n = 3 these are still descriptive.
+- Not comparable bit-for-bit with Phase 0/1 (different GPU, single process, bf16); Phase 2 comparisons are only
+  made within Phase 2.
+
+### E3: facts + in-context recall (Kaggle 2×T4, NB30 + NB31)
+Question: when the model must also *memorize* fixed facts, does in-context recall suffer (as gated recurrent models
+learn the memorization solution first, Tong et al. 2026, arXiv 2609.16540), and does an n-gram memory (Engram)
+protect in-context recall by taking over the memorization?
+- Task (`data/mqar.py`, facts variant): N = N\* = 32 in-context pairs, F = 0, plus M = 32 fact queries per sequence
+  from a fixed table of K = 2,048 two-token facts (a, b) → value (fact tokens: 64, own vocabulary range). Facts never
+  appear in the context. Facts **off** = plain MQAR at the same N.
+- Arms A1, A2 (E3.1), A3, A4 (E3.2), each with facts off and on, seeds {0..4} (`phase3_seeds`), 6,000 steps,
+  Phase 1 LRs, λ = 0, val eval every 250 steps. A6 (leak probe), facts on, 1 seed. 41 runs.
+- Metric: **in-context recall** (`recall_ctx`, eval set) at facts on. Rule: 2σ pooled, n = 5.
+- **H5a (precondition):** A1 facts off > A1 facts on.
+- **H5 (main):** A2 > A1 at facts on, **and** A2 > A3 and A2 > A4 at facts on (A4 = unigram table cannot store
+  two-token facts; A3 = frozen random table). If A2 > A1 but not > A3 / A4: "extra lookup capacity", not
+  "n-gram offload".
+- Context check: A2 vs A1 at facts off. A gain there too means the effect is not about offloading memorization.
+- Secondary, descriptive: fact recall; escape step (first eval step with in-context val recall ≥ 0.5) and the number
+  of seeds that escape within 6,000 steps.
+- Leak: A6 in-context recall < 1% at facts on (its fact recall is expected to be high, and is reported).
