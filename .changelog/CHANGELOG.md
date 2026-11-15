@@ -870,3 +870,17 @@ Diff: `.changelog/entries/0038/diff.patch`
 **What the change does:** PREREG.md gets the E3 outcome table (H5a and H5 not supported, leak check passes, table arms escape later) and the rules for E2.ngram (buckets, comparisons, reading) and E2.long (A1/A2 seed 0 at 4,576 steps, closes/shrinks/persists criteria), written before any run. DEVIATIONS.md D15 and a README note on the two new commands.
 
 Diff: `.changelog/entries/0039/diff.patch`
+
+---
+
+## [0040] Record E2.ngram and E2.long outcomes
+*2026-11-15 11:05:30*
+
+- **File:** `PREREG.md` (modified, +32/-0)
+  - **Lines:** 209-240 added
+
+**Summary:** Record E2.ngram and E2.long outcomes
+
+**What the change does:** Adds the outcome tables of the two follow-up studies to PREREG.md with their pre-registered readings: E2.ngram shows A2-A1 shrinking with n-gram frequency but A3-A1 shrinking the same way (no learned-table effect); E2.long (1 seed, 2x steps) shows the A2-A1 gap closing from +0.035 to +0.013. Notes the cost and that no further runs are planned.
+
+Diff: `.changelog/entries/0040/diff.patch`

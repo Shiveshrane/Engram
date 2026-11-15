@@ -206,3 +206,35 @@ Exploratory and descriptive. They answer two questions about the Phase 2 result 
 - Reading fixed in advance (one seed, descriptive): the gap "closes" if A2 − A1 at 2× steps is less than half of
   E2.1's 3-seed mean gap (+0.035 nats overall); it "persists" if it is at least E2.1's seed-0 gap minus 2× E2.1's
   pooled seed std; otherwise "shrinks".
+
+### E2.ngram outcome (Modal L4, code 0d9b8b4, 9 E2.1 runs, full val set, positions p ≥ 2)
+
+Mean loss by the training count of the trigram ending at p (3 seeds); A2 − A1 and A3 − A1 exceed 2σ in every bucket.
+
+| Trigram count | Val share | A1 | A2 | A3 | A2 − A1 | A3 − A1 |
+|---|---|---|---|---|---|---|
+| 0 | 26% | 3.675 | 3.719 | 3.717 | +0.043 | +0.041 |
+| 1–9 | 25% | 3.756 | 3.795 | 3.793 | +0.038 | +0.037 |
+| 10–99 | 26% | 3.829 | 3.860 | 3.859 | +0.031 | +0.030 |
+| 100–999 | 17% | 3.858 | 3.885 | 3.884 | +0.027 | +0.026 |
+| ≥ 1,000 | 7% | 4.316 | 4.344 | 4.340 | +0.029 | +0.025 |
+
+Reading (fixed in advance): A2 − A1 decreases with the count, **but so does A3 − A1** (frozen random table), so there is
+no effect specific to a learned n-gram table. A2 is worse than A1 in the ≥ 1,000 bucket (no positive result).
+Bigrams give the same picture (A2 − A1 +0.045 → +0.032).
+
+### E2.long outcome (Modal A100, code 0d9b8b4, seed 0, 4,576 steps = 300M tokens seen, 2 epochs)
+
+| Runs | A1 loss | A2 − A1 all | [0, 64) | [64, 256) | [256, 1024) | in-context copy |
+|---|---|---|---|---|---|---|
+| E2.1 seed 0 (1×) | 3.818 | +0.039 | +0.021 | +0.037 | +0.041 | +0.053 |
+| E2.1 mean of 3 seeds (1×) | 3.812 | +0.035 | +0.029 | +0.034 | +0.036 | +0.039 |
+| E2.long seed 0 (2×) | 3.600 | +0.013 | +0.008 | +0.012 | +0.013 | +0.011 |
+
+- By the pre-registered reading the gap **closes**: +0.0128 < half of E2.1's mean gap (0.0175). One seed;
+  A2 is still worse than A1.
+- E2.ngram at 2× (descriptive): A2 − A1 by trigram count 0 / 1–9 / 10–99 / 100–999 / ≥ 1,000 = +0.019 / +0.016 /
+  +0.010 / +0.006 / +0.007, a steeper decrease than at 1×. A3 was not run at 2×, so this cannot be attributed
+  to the learned table.
+- Cost: ~$5.7 (incl. ~$0.6 lost when the local Modal client disconnected; the runs resumed from step 200).
+  Modal total ~$22 of $30. No further runs (human decision 2026-11-15).

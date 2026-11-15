@@ -4176,6 +4176,29 @@
           "after_hash": "b3cc10c22ab8"
         }
       ]
+    },
+    {
+      "id": "0040",
+      "time": "2026-11-15 11:05:30",
+      "summary": "Record E2.ngram and E2.long outcomes",
+      "explanation": "Adds the outcome tables of the two follow-up studies to PREREG.md with their pre-registered readings: E2.ngram shows A2-A1 shrinking with n-gram frequency but A3-A1 shrinking the same way (no learned-table effect); E2.long (1 seed, 2x steps) shows the A2-A1 gap closing from +0.035 to +0.013. Notes the cost and that no further runs are planned.",
+      "files": [
+        {
+          "path": "PREREG.md",
+          "status": "modified",
+          "hunks": [
+            {
+              "kind": "added",
+              "new": "209-240",
+              "old": null
+            }
+          ],
+          "added": 32,
+          "removed": 0,
+          "before_existed": true,
+          "after_hash": "ea70003c21cd"
+        }
+      ]
     }
   ]
 }
